@@ -1,0 +1,9 @@
+## Interface: 120005
+## Title: Nameplate Aura Extender
+## Notes: Adds selected shared debuffs to Blizzard enemy-player nameplate aura rows.
+## Author: Brian
+## Version: 1.0.0
+## AllowLoadGameType: mainline
+
+Spells.lua
+NameplateAuraExtender.lua
