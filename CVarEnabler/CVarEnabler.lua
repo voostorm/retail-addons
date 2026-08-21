@@ -6,20 +6,6 @@ local CVARS = {
     WorldTextScale_v2 = "1.5",
 }
 
--- Bitfield CVars: each listed index must remain enabled.
--- Enemy NPC Buffs/Debuffs:
---   1 = Mob Buffs
---   2 = Personal Debuffs
---   3 = Shared CC
--- Enemy Player Buffs/Debuffs:
---   1 = Enemy Buffs
---   2 = Personal Debuffs
---   3 = Big Debuff / Loss of Control
-local BITFIELD_CVARS = {
-    nameplateEnemyNpcAuraDisplay = { 1, 2, 3 },
-    nameplateEnemyPlayerAuraDisplay = { 1, 2, 3 },
-}
-
 local function ApplyCVar(cvar, desiredValue)
     local currentValue = C_CVar.GetCVar(cvar)
     if currentValue ~= desiredValue then
@@ -27,21 +13,9 @@ local function ApplyCVar(cvar, desiredValue)
     end
 end
 
-local function ApplyBitfieldCVar(cvar, enabledIndices)
-    for _, index in ipairs(enabledIndices) do
-        if not C_CVar.GetCVarBitfield(cvar, index) then
-            C_CVar.SetCVarBitfield(cvar, index, true)
-        end
-    end
-end
-
 local function ApplyAll()
     for cvar, desiredValue in pairs(CVARS) do
         ApplyCVar(cvar, desiredValue)
-    end
-
-    for cvar, enabledIndices in pairs(BITFIELD_CVARS) do
-        ApplyBitfieldCVar(cvar, enabledIndices)
     end
 end
 
@@ -58,20 +32,12 @@ local function FindManagedCVar(changedCVar)
         end
     end
 
-    for cvar in pairs(BITFIELD_CVARS) do
-        if string.lower(cvar) == changedLower then
-            return "bitfield", cvar
-        end
-    end
-
     return nil, nil
 end
 
 local function ReapplyManagedCVar(kind, cvar)
     if kind == "normal" then
         ApplyCVar(cvar, CVARS[cvar])
-    elseif kind == "bitfield" then
-        ApplyBitfieldCVar(cvar, BITFIELD_CVARS[cvar])
     end
 end
 
