@@ -1,0 +1,8 @@
+## Interface: 120005
+## Title: CVar Enabler
+## Notes: Enforces selected CVars and nameplate aura options, and hides Blizzard UI error text.
+## Author: Brian
+## Version: 1.0.3
+## AllowLoadGameType: mainline
+
+CVarEnabler.lua
