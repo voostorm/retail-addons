@@ -1,0 +1,8 @@
+## Interface: 120005
+## Title: Hide Action Bar Glow
+## Notes: Disables Blizzard spell activation/proc glows on action bar buttons.
+## Author: Brian
+## Version: 1.0.0
+## AllowLoadGameType: mainline
+
+HideActionBarGlow.lua
