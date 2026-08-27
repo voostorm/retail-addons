@@ -1,0 +1,2121 @@
+local addonName, addon = ...
+local C = addon.Constants
+local MCE = LibStub("AceAddon-3.0"):GetAddon(C.Addon.AceName)
+local L = LibStub("AceLocale-3.0"):GetLocale(C.Addon.AceName)
+local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+local AceConfigRegistry = LibStub("AceConfigRegistry-3.0")
+
+-- === UPVALUE LOCALS ===
+local format = string.format
+local sort = table.sort
+local tconcat = table.concat
+local strtrim = strtrim
+
+-- Retrieve version dynamically from TOC
+local addonVersion = C_AddOns.GetAddOnMetadata(addonName, "Version")
+    or C.Addon.VersionFallback
+
+local function GetLibSharedMedia()
+    return LibStub("LibSharedMedia-3.0", true)
+end
+
+-- === SHARED LOOKUP TABLES ===
+
+-- Base fonts always available (WoW built-ins + addon-bundled fonts)
+local FONT_OPTIONS_BASE = C.FontOptionsBase
+
+-- Base font labels that are descriptive text (not proper font names) get localized here
+local FONT_DISPLAY_OVERRIDES = {
+    [C.Style.Fonts.GameDefault] = L["Game Default"],
+}
+
+--- Returns a merged font table: base fonts + any fonts registered in LibSharedMedia.
+--- Declared as a function so the values are evaluated lazily each time the options
+--- panel opens, picking up fonts registered by other addons after this file loads.
+local function GetFontOptions()
+    local opts = {}
+    local usedNames = {}
+    local LSM = GetLibSharedMedia()
+
+    if LSM then
+        for name, path in pairs(LSM:HashTable("font")) do
+            -- LSM entries take priority
+            if not opts[path] and not usedNames[name:lower()] then
+                opts[path] = name
+                usedNames[name:lower()] = true
+            end
+        end
+    end
+
+    -- Add base fonts only when not already claimed by LSM (path + display name)
+    for path, label in pairs(FONT_OPTIONS_BASE) do
+        local displayLabel = FONT_DISPLAY_OVERRIDES[path] or label
+        if not opts[path] and not usedNames[displayLabel:lower()] then
+            opts[path] = displayLabel
+            usedNames[displayLabel:lower()] = true
+        end
+    end
+    
+    return opts
+end
+
+local OUTLINE_OPTIONS = {
+    [C.Style.FontStyles.None] = L["None"],
+    [C.Style.FontStyles.Outline] = L["Outline"],
+    [C.Style.FontStyles.ThickOutline] = L["Thick"],
+    [C.Style.FontStyles.Monochrome] = L["Mono"],
+}
+
+local ANCHOR_OPTIONS = {
+    [C.Style.Anchors.Center] = L["Center"],
+    [C.Style.Anchors.Top] = L["Top"],
+    [C.Style.Anchors.Bottom] = L["Bottom"],
+    [C.Style.Anchors.Left] = L["Left"],
+    [C.Style.Anchors.Right] = L["Right"],
+    [C.Style.Anchors.TopLeft] = L["Top Left"],
+    [C.Style.Anchors.TopRight] = L["Top Right"],
+    [C.Style.Anchors.BottomLeft] = L["Bottom Left"],
+    [C.Style.Anchors.BottomRight] = L["Bottom Right"],
+}
+
+local PLAYER_AURA_TYPE = C.PlayerAuraTypes
+
+-- =========================================================================
+-- HELPERS  – DRY accessor builders to eliminate repetitive get/set closures
+-- =========================================================================
+
+--- Returns a getter function for `MCE.db.profile.categories[key][field]`.
+local function CatGet(key, field, fallback)
+    return function()
+        local v = MCE.db.profile.categories[key][field]
+        if v ~= nil then
+            return v
+        end
+        return fallback
+    end
+end
+
+local function CategoryNeedsFullScan(key)
+    return key == C.Categories.HealerCC
+        or key == C.Categories.MiniAuras
+        or key == C.Categories.MyDRs
+        or key == C.Categories.SArena
+        or key == C.Categories.TellMeWhen
+        or key == C.Categories.Unitframe
+        or key == C.Categories.Shackled
+end
+
+local OWNERSHIP_CATEGORIES = {
+    [C.Categories.Actionbar] = true,
+    [C.Categories.Nameplate] = true,
+    [C.Categories.Unitframe] = true,
+    [C.Categories.CooldownManager] = true,
+    [C.Categories.HealerCC] = true,
+    [C.Categories.MiniAuras] = true,
+    [C.Categories.MyDRs] = true,
+    [C.Categories.SArena] = true,
+    [C.Categories.TellMeWhen] = true,
+    [C.Categories.Shackled] = true,
+}
+
+--- Returns a setter function that writes and refreshes.
+local function CatSet(key, field)
+    return function(_, val)
+        MCE.db.profile.categories[key][field] = val
+        MCE:ForceUpdateAll(CategoryNeedsFullScan(key))
+        AceConfigRegistry:NotifyChange(addonName)
+    end
+end
+
+--- Returns a setter function for sliders that writes immediately and refreshes once dragging stops.
+local function CatRangeSet(key, field)
+    return function(_, val)
+        MCE.db.profile.categories[key][field] = val
+        MCE:RequestDebouncedOptionRefresh(false)
+    end
+end
+
+local function DebouncedRangeSet(setter, fullScan)
+    return function(...)
+        setter(...)
+        MCE:RequestDebouncedOptionRefresh(fullScan)
+    end
+end
+
+local function SectionSpacer(order, hidden)
+    return {
+        type = "description",
+        order = order,
+        name = " ",
+        fontSize = "small",
+        hidden = hidden,
+    }
+end
+
+local function RowBreak(order, hidden)
+    return {
+        type = "description",
+        order = order,
+        name = "",
+        width = "full",
+        hidden = hidden,
+    }
+end
+
+local function BuildCategoryDescription(desc)
+    if not desc then return nil end
+    return "|cff9fb3c8" .. desc .. "|r"
+end
+
+--- Returns a colour getter (r,g,b,a).
+local function CatColorGet(key, field)
+    return function()
+        local c = MCE.db.profile.categories[key][field]
+        return c.r, c.g, c.b, c.a
+    end
+end
+
+--- Returns a colour setter.
+local function CatColorSet(key, field)
+    return function(_, r, g, b, a)
+        local c = MCE.db.profile.categories[key][field]
+        c.r, c.g, c.b, c.a = r, g, b, a
+        MCE:ForceUpdateAll(CategoryNeedsFullScan(key))
+    end
+end
+
+local function GetProfile()
+    return MCE.db and MCE.db.profile or nil
+end
+
+local function NotifyOptionsChanged()
+    AceConfigRegistry:NotifyChange(addonName)
+end
+
+local function GetPlayerAuraConfig()
+    local profile = GetProfile()
+    local categories = profile and profile.categories
+    return categories and categories[C.Categories.PlayerAura] or nil
+end
+
+local function GetPlayerAuraTypeConfig(typeKey)
+    local config = GetPlayerAuraConfig()
+    if not config then
+        return nil, nil
+    end
+
+    if type(config[typeKey]) ~= "table" then
+        config[typeKey] = {}
+    end
+
+    return config, config[typeKey]
+end
+
+local function PlayerAuraTypeGet(typeKey, field, fallback)
+    return function()
+        local _, typeConfig = GetPlayerAuraTypeConfig(typeKey)
+        local value = typeConfig and typeConfig[field]
+        if value ~= nil then
+            return value
+        end
+
+        return fallback
+    end
+end
+
+local function PlayerAuraTypeSet(typeKey, field)
+    return function(_, value)
+        local _, typeConfig = GetPlayerAuraTypeConfig(typeKey)
+        if not typeConfig then return end
+
+        typeConfig[field] = value
+        MCE:ForceUpdateAll(false)
+        NotifyOptionsChanged()
+    end
+end
+
+local function PlayerAuraTypeRangeSet(typeKey, field)
+    return function(_, value)
+        local _, typeConfig = GetPlayerAuraTypeConfig(typeKey)
+        if not typeConfig then return end
+
+        typeConfig[field] = value
+        MCE:RequestDebouncedOptionRefresh(false)
+    end
+end
+
+local function PlayerAuraTypeColorGet(typeKey, field, fallbackColor)
+    return function()
+        local _, typeConfig = GetPlayerAuraTypeConfig(typeKey)
+        if not typeConfig then
+            local c = fallbackColor or C.Colors.White
+            return c.r, c.g, c.b, c.a
+        end
+
+        local color = typeConfig[field]
+        if type(color) ~= "table" then
+            color = CopyTable(fallbackColor or C.Colors.White)
+            typeConfig[field] = color
+        end
+
+        return color.r, color.g, color.b, color.a
+    end
+end
+
+local function PlayerAuraTypeColorSet(typeKey, field)
+    return function(_, r, g, b, a)
+        local _, typeConfig = GetPlayerAuraTypeConfig(typeKey)
+        if not typeConfig then return end
+
+        if type(typeConfig[field]) ~= "table" then
+            typeConfig[field] = {}
+        end
+
+        local color = typeConfig[field]
+        color.r, color.g, color.b, color.a = r, g, b, a
+        MCE:ForceUpdateAll(false)
+    end
+end
+
+local function IsPlayerAuraTypeEnabledByDefault(typeKey)
+    return typeKey ~= PLAYER_AURA_TYPE.ExternalDefensiveBuffs
+end
+
+local function IsPlayerAuraTypeUnchecked(typeKey)
+    local _, typeConfig = GetPlayerAuraTypeConfig(typeKey)
+    if type(typeConfig) ~= "table" or typeConfig.enabled == nil then
+        return not IsPlayerAuraTypeEnabledByDefault(typeKey)
+    end
+
+    return typeConfig.enabled == false
+end
+
+local function IsPlayerAuraTypeStackStyleHidden(typeKey)
+    return PlayerAuraTypeGet(typeKey, "hideStackText", false)()
+        or not PlayerAuraTypeGet(typeKey, "stackEnabled", true)()
+end
+
+local function GetDurationTextColorsConfig()
+    local profile = MCE.db and MCE.db.profile
+    if not profile then return nil end
+
+    profile.durationTextColors = MCE.EnsureDurationTextColorConfig(profile.durationTextColors)
+    return profile.durationTextColors
+end
+
+local function GetAllowThresholdDefault(sourceKey)
+    local defaults = C.Defaults and C.Defaults.AllowThresholdColorsByCategory
+    return defaults and defaults[sourceKey] == true or false
+end
+
+local function DurationColorsEnabled()
+    local config = GetDurationTextColorsConfig()
+    return config and config.enabled or false
+end
+
+local function DurationColorsDisabled()
+    return not DurationColorsEnabled()
+end
+
+local function ShinyAurasAdapterEnabled()
+    return MCE:IsShinyAurasAdapterEnabled()
+end
+
+local function SetAddonIntegrationEnabled(field)
+    return function(_, value)
+        local profile = GetProfile()
+        if not profile then return end
+
+        profile[field] = value
+        MCE:MarkReloadRequired()
+        MCE:ForceUpdateAll(true)
+        NotifyOptionsChanged()
+    end
+end
+
+local SetShinyAurasAdapterEnabled = SetAddonIntegrationEnabled("shinyAurasAdapterEnabled")
+
+local function DominosAdapterEnabled()
+    return MCE:IsDominosAdapterEnabled()
+end
+
+local SetDominosAdapterEnabled = SetAddonIntegrationEnabled("dominosAdapterEnabled")
+
+local function Bartender4AdapterEnabled()
+    return MCE:IsBartender4AdapterEnabled()
+end
+
+local SetBartender4AdapterEnabled = SetAddonIntegrationEnabled("bartender4AdapterEnabled")
+
+local function ElvUIAdapterEnabled()
+    return MCE:IsElvUIAdapterEnabled()
+end
+
+local SetElvUIAdapterEnabled = SetAddonIntegrationEnabled("elvuiAdapterEnabled")
+
+local function GetCooldownManagerCenteredProfile()
+    local cmc = _G[C.Addon.CooldownManagerCenteredName]
+    local db = type(cmc) == "table" and cmc.db or nil
+    local profile = db and db.profile
+    if type(profile) == "table" then
+        return profile
+    end
+
+    return nil
+end
+
+local function GetCooldownManagerCenteredTimerStyledViewers()
+    local profile = GetCooldownManagerCenteredProfile()
+    if not profile then
+        return nil
+    end
+
+    local viewers = {}
+    if profile.cooldownManager_cooldownFontSizeEssential_enabled then
+        viewers[#viewers + 1] = L["Essential Viewer"]
+    end
+    if profile.cooldownManager_cooldownFontSizeUtility_enabled then
+        viewers[#viewers + 1] = L["Utility Viewer"]
+    end
+    if profile.cooldownManager_cooldownFontSizeBuffIcons_enabled then
+        viewers[#viewers + 1] = L["Buff Icon Viewer"]
+    end
+
+    return viewers
+end
+
+local function GetCooldownManagerCenteredTimerConflictMessage()
+    if not MCE:IsCooldownManagerCenteredAvailable() then
+        return nil
+    end
+
+    local viewers = GetCooldownManagerCenteredTimerStyledViewers()
+    if not viewers or #viewers == 0 then
+        return nil
+    end
+
+    return format(
+        L["CooldownManagerCentered also styles %s. This may add a small performance cost. Disable CMC timer fonts if you want MiniCE to remain the only owner of those viewer timers."],
+        tconcat(viewers, ", ")
+    )
+end
+
+local function HasCooldownManagerCenteredTimerConflict()
+    return GetCooldownManagerCenteredTimerConflictMessage() ~= nil
+end
+
+local function ShouldShowAddonIntegrations()
+    return MCE:IsShinyAurasAvailable()
+        or MCE:IsDominosAvailable()
+        or MCE:IsBartender4Available()
+        or MCE:IsElvUIAvailable()
+        or HasCooldownManagerCenteredTimerConflict()
+end
+
+local function DurationOffsetGet()
+    local config = GetDurationTextColorsConfig()
+    return config.offset
+end
+
+local function DurationOffsetSet(_, val)
+    local config = GetDurationTextColorsConfig()
+    config.offset = val
+    MCE:RequestDebouncedOptionRefresh(true)
+end
+
+local function DurationThresholdValueGet(index)
+    return function()
+        local config = GetDurationTextColorsConfig()
+        return config.thresholds[index].threshold
+    end
+end
+
+local function DurationThresholdValueSet(index)
+    return DebouncedRangeSet(function(_, val)
+        local config = GetDurationTextColorsConfig()
+        config.thresholds[index].threshold = val
+    end)
+end
+
+local function DurationThresholdColorGet(index)
+    return function()
+        local c = GetDurationTextColorsConfig().thresholds[index].color
+        return c.r, c.g, c.b, c.a
+    end
+end
+
+local function DurationThresholdColorSet(index)
+    return function(_, r, g, b, a)
+        local c = GetDurationTextColorsConfig().thresholds[index].color
+        c.r, c.g, c.b, c.a = r, g, b, a
+        MCE:ForceUpdateAll(true)
+    end
+end
+
+local function DefaultDurationColorGet()
+    local c = GetDurationTextColorsConfig().defaultColor
+    return c.r, c.g, c.b, c.a
+end
+
+local function DefaultDurationColorSet(_, r, g, b, a)
+    local c = GetDurationTextColorsConfig().defaultColor
+    c.r, c.g, c.b, c.a = r, g, b, a
+    MCE:ForceUpdateAll(true)
+end
+
+local function IsCategoryStylingBlocked(key)
+    return MCE:IsCategoryBlockedByAddonConflict(key)
+end
+
+local function GetCategoryConflictWarning(key)
+    if not IsCategoryStylingBlocked(key) then return nil end
+
+    if key == C.Categories.Unitframe then
+        return L["BETTERBLIZZFRAMES_UNITFRAME_CONFLICT_WARNING"]
+    end
+    if key == C.Categories.Nameplate then
+        return L["BETTERBLIZZPLATES_NAMEPLATE_CONFLICT_WARNING"]
+    end
+    return nil
+end
+
+local function IsCatDisabled(key)
+    return not MCE.db.profile.categories[key].enabled
+        or IsCategoryStylingBlocked(key)
+end
+
+local function IsStackHidden(key)
+    local config = MCE.db.profile.categories[key]
+    return not config.stackEnabled or config.hideStackText
+end
+
+local function ResolveOptionValue(value)
+    if type(value) == "function" then
+        local ok, result = pcall(value)
+        if ok then
+            return result
+        end
+        return nil
+    end
+
+    return value
+end
+
+local function IsOptionHidden(option)
+    local hidden = ResolveOptionValue(option.hidden)
+    return hidden and true or false
+end
+
+local function BuildRootTreeDefinition()
+    local options = MCE:GetOptions()
+    local entries = {}
+
+    for key, option in pairs(options.args or {}) do
+        if option and option.type == "group" and not option.inline and not IsOptionHidden(option) then
+            entries[#entries + 1] = {
+                value = key,
+                text = ResolveOptionValue(option.name) or key,
+                disabled = false,
+            }
+        end
+    end
+
+    sort(entries, function(a, b)
+        local optA = options.args[a.value] or {}
+        local optB = options.args[b.value] or {}
+        local orderA = optA.order or 100
+        local orderB = optB.order or 100
+
+        if orderA == orderB then
+            return tostring(a.text):upper() < tostring(b.text):upper()
+        end
+
+        return orderA < orderB
+    end)
+
+    return entries
+end
+
+local function RefreshTreeWidgets(widget)
+    if not widget then return end
+
+    if widget.type == "TreeGroup" then
+        widget:SetTree(BuildRootTreeDefinition())
+    end
+
+    if widget.children then
+        for _, child in ipairs(widget.children) do
+            RefreshTreeWidgets(child)
+        end
+    end
+end
+
+local function RefreshDynamicCategoryLabels()
+    if not AceConfigDialog then return end
+
+    local openFrame = AceConfigDialog.OpenFrames and AceConfigDialog.OpenFrames[addonName]
+    if openFrame then
+        RefreshTreeWidgets(openFrame)
+    end
+
+    local blizOptions = AceConfigDialog.BlizOptions and AceConfigDialog.BlizOptions[addonName]
+    if blizOptions then
+        for _, widget in pairs(blizOptions) do
+            RefreshTreeWidgets(widget)
+        end
+    end
+end
+
+local function SetCategoryEnabledValue(key, value)
+    if IsCategoryStylingBlocked(key) then
+        return
+    end
+
+    local needsFullScan = CategoryNeedsFullScan(key)
+    MCE.db.profile.categories[key].enabled = value
+    MCE:MarkReloadRequired()
+    if OWNERSHIP_CATEGORIES[key] and not needsFullScan then
+        MCE:InvalidateOwnership()
+    end
+    MCE:ForceUpdateAll(needsFullScan)
+    NotifyOptionsChanged()
+end
+
+local function SetCategoryEnabled(key)
+    return function(_, value)
+        SetCategoryEnabledValue(key, value)
+    end
+end
+
+local function SetDashboardCategoryEnabled(key)
+    return function(_, value)
+        SetCategoryEnabledValue(key, value)
+        RefreshDynamicCategoryLabels()
+    end
+end
+
+local function HasImportPayload()
+    return type(MCE.profileImportBuffer) == "string" and strtrim(MCE.profileImportBuffer) ~= ""
+end
+
+local function BuildProfileImportExportOptions(order)
+    return {
+        type = "group",
+        name = L["Import / Export"],
+        order = order,
+        args = {
+            description = {
+                type = "description",
+                order = 0,
+                width = "full",
+                fontSize = "medium",
+                name = "|cffbbbbbb" .. L["PROFILE_IMPORT_EXPORT_DESC"] .. "|r\n",
+            },
+            exportHeader = {
+                type = "header",
+                order = 1,
+                name = L["Export current profile"],
+            },
+            exportButton = {
+                type = "execute",
+                order = 2,
+                width = 0.9,
+                name = L["Generate export"],
+                func = function()
+                    local exportString, err = MCE:ExportConfig()
+                    if not exportString and err then
+                        MCE:Print(err)
+                    else
+                        MCE:Print(L["Export string generated. Copy it with Ctrl+C."])
+                    end
+
+                    AceConfigRegistry:NotifyChange(addonName)
+                end,
+            },
+            exportCode = {
+                type = "input",
+                order = 3,
+                width = "full",
+                multiline = 10,
+                name = L["Export code"],
+                desc = L["Generate an export string, then click inside this box and copy it with Ctrl+C."],
+                get = function()
+                    return MCE.profileExportBuffer or ""
+                end,
+                set = function(_, value)
+                    MCE.profileExportBuffer = value or ""
+                end,
+            },
+            importHeader = {
+                type = "header",
+                order = 10,
+                name = L["Import profile"],
+            },
+            importCode = {
+                type = "input",
+                order = 11,
+                width = "full",
+                multiline = 10,
+                name = L["Import code"],
+                desc = L["Paste an exported string here, then click Import."],
+                get = function()
+                    return MCE.profileImportBuffer or ""
+                end,
+                set = function(_, value)
+                    MCE.profileImportBuffer = value or ""
+                end,
+            },
+            importButton = {
+                type = "execute",
+                order = 12,
+                width = 0.9,
+                name = L["Import"],
+                disabled = function()
+                    return not HasImportPayload()
+                end,
+                confirm = function()
+                    return HasImportPayload()
+                end,
+                confirmText = L["Importing will overwrite the current profile settings. Continue?"],
+                func = function()
+                    local ok, err = MCE:ImportConfig(MCE.profileImportBuffer)
+                    if not ok and err then
+                        MCE:Print(err)
+                    elseif ok then
+                        MCE:MarkReloadRequired()
+                    end
+
+                    RefreshDynamicCategoryLabels()
+                    AceConfigRegistry:NotifyChange(addonName)
+                end,
+            },
+        },
+    }
+end
+
+local function BuildPlayerAuraTypeOptions(typeKey, title, order)
+    local categoryKey = C.Categories.PlayerAura
+    local disabledFn = function() return IsCatDisabled(categoryKey) end
+    local hiddenFn = function() return IsPlayerAuraTypeUnchecked(typeKey) end
+    local stackHiddenFn = function() return IsPlayerAuraTypeStackStyleHidden(typeKey) end
+
+    return {
+        type = "group",
+        name = "|cffffd100" .. title .. "|r",
+        inline = true,
+        order = order,
+        disabled = disabledFn,
+        hidden = hiddenFn,
+        args = {
+            typographyHeader = {
+                type = "header", name = L["Typography (Cooldown Numbers)"], order = 1,
+            },
+            font = {
+                type = "select", order = 2, width = 1.5,
+                name = L["Font Face"], values = GetFontOptions,
+                get = PlayerAuraTypeGet(typeKey, "font", C.Defaults.Category.Font),
+                set = PlayerAuraTypeSet(typeKey, "font"),
+            },
+            fontSize = {
+                type = "range", order = 3, width = 0.7,
+                name = L["Size"], min = 6, max = 36, step = 1,
+                get = PlayerAuraTypeGet(typeKey, "fontSize", 12),
+                set = PlayerAuraTypeRangeSet(typeKey, "fontSize"),
+            },
+            fontStyle = {
+                type = "select", order = 4, width = 0.8,
+                name = L["Outline"], values = OUTLINE_OPTIONS,
+                get = PlayerAuraTypeGet(typeKey, "fontStyle", C.Defaults.Category.FontStyle),
+                set = PlayerAuraTypeSet(typeKey, "fontStyle"),
+            },
+            textColor = {
+                type = "color", order = 5, width = "half",
+                name = L["Color"], hasAlpha = true,
+                get = PlayerAuraTypeColorGet(typeKey, "textColor", C.Colors.Highlight),
+                set = PlayerAuraTypeColorSet(typeKey, "textColor"),
+            },
+            hideCountdownNumbers = {
+                type = "toggle", order = 6, width = "1",
+                name = L["Hide Numbers"],
+                desc = L["Hide the text entirely (useful if you only want the swipe edge or stacks)."],
+                get = PlayerAuraTypeGet(typeKey, "hideCountdownNumbers", false),
+                set = PlayerAuraTypeSet(typeKey, "hideCountdownNumbers"),
+            },
+            posHeaderTopSpacing = SectionSpacer(9.95),
+            posHeader = { type = "header", name = L["Positioning"], order = 10 },
+            posHeaderBottomSpacing = SectionSpacer(10.05),
+            timerInsideIcon = {
+                type = "toggle", order = 10.5, width = 1.3,
+                name = L["Timer Inside Icon"],
+                desc = L["Place the aura timer in the center of the icon instead of Blizzard's default outside position."],
+                get = PlayerAuraTypeGet(typeKey, "timerInsideIcon", false),
+                set = PlayerAuraTypeSet(typeKey, "timerInsideIcon"),
+            },
+            textOffsetX = {
+                type = "range", order = 11, width = "half",
+                name = L["Offset X"], min = -30, max = 30, step = 1,
+                get = PlayerAuraTypeGet(typeKey, "textOffsetX", 0),
+                set = PlayerAuraTypeRangeSet(typeKey, "textOffsetX"),
+            },
+            textOffsetY = {
+                type = "range", order = 12, width = "half",
+                name = L["Offset Y"], min = -30, max = 30, step = 1,
+                get = PlayerAuraTypeGet(typeKey, "textOffsetY", 0),
+                set = PlayerAuraTypeRangeSet(typeKey, "textOffsetY"),
+            },
+            swipeHeaderTopSpacing = SectionSpacer(19.95),
+            swipeHeader = { type = "header", name = L["Swipe Animation"], order = 20 },
+            swipeHeaderBottomSpacing = SectionSpacer(20.05),
+            drawSwipe = {
+                type = "toggle", order = 21, width = 1.20,
+                name = L["Show Swipe Animation"],
+                desc = L["Shows the dark overlay that sweeps during a cooldown."],
+                get = PlayerAuraTypeGet(typeKey, "drawSwipe", true),
+                set = PlayerAuraTypeSet(typeKey, "drawSwipe"),
+            },
+            swipeAlpha = {
+                type = "range", order = 22, width = 1,
+                name = L["Swipe Shade Alpha"],
+                desc = L["0% = transparent, 100% = full dark."],
+                min = 0, max = 100, step = 1,
+                get = PlayerAuraTypeGet(typeKey, "swipeAlpha", 80),
+                set = PlayerAuraTypeRangeSet(typeKey, "swipeAlpha"),
+            },
+            swipeRowBreak1 = RowBreak(22.1),
+            edgeEnabled = {
+                type = "toggle", order = 23, width = "1",
+                name = L["Show Swipe Edge"],
+                desc = L["Shows the white line indicating cooldown progress."],
+                get = PlayerAuraTypeGet(typeKey, "edgeEnabled", true),
+                set = PlayerAuraTypeSet(typeKey, "edgeEnabled"),
+            },
+            edgeScale = {
+                type = "range", order = 24, width = "2",
+                name = L["Edge Thickness"],
+                desc = L["Scale of the swipe line (1.0 = Default)."],
+                min = 0.5, max = 2.0, step = 0.1,
+                get = PlayerAuraTypeGet(typeKey, "edgeScale", 1.4),
+                set = PlayerAuraTypeRangeSet(typeKey, "edgeScale"),
+            },
+            reverseSwipe = {
+                type = "toggle", order = 25, width = "full",
+                name = L["Reverse Swipe"],
+                desc = L["Reverse the swipe direction so the shade fills in the opposite direction."],
+                get = PlayerAuraTypeGet(typeKey, "reverseSwipe", true),
+                set = PlayerAuraTypeSet(typeKey, "reverseSwipe"),
+            },
+            stackHeaderTopSpacing = SectionSpacer(39.95),
+            stackHeader = { type = "header", name = L["Stack Counters / Charges"], order = 40 },
+            stackHeaderBottomSpacing = SectionSpacer(40.05),
+            hideStackText = {
+                type = "toggle", order = 41, width = "1",
+                name = L["Hide Stack Text"],
+                desc = L["Hide stacks and charges entirely."],
+                get = PlayerAuraTypeGet(typeKey, "hideStackText", false),
+                set = PlayerAuraTypeSet(typeKey, "hideStackText"),
+            },
+            stackEnabled = {
+                type = "toggle", order = 42, width = 1.3,
+                name = L["Customize Stack Text"],
+                desc = L["Take control over the charge counter (e.g., 2 stacks of Conflagrate)."],
+                get = PlayerAuraTypeGet(typeKey, "stackEnabled", true),
+                set = PlayerAuraTypeSet(typeKey, "stackEnabled"),
+                hidden = function()
+                    return PlayerAuraTypeGet(typeKey, "hideStackText", false)()
+                end,
+            },
+            stackStyleTopSpacing = SectionSpacer(49.95, stackHiddenFn),
+            stackStyleHeader = { type = "header", name = L["Style"], order = 50, hidden = stackHiddenFn },
+            stackStyleBottomSpacing = SectionSpacer(50.05, stackHiddenFn),
+            stackFont = {
+                type = "select", order = 51, width = 1.5,
+                name = L["Font"], values = GetFontOptions,
+                get = PlayerAuraTypeGet(typeKey, "stackFont", C.Defaults.Category.StackFont),
+                set = PlayerAuraTypeSet(typeKey, "stackFont"),
+                hidden = stackHiddenFn,
+            },
+            stackSize = {
+                type = "range", order = 52, width = 0.7,
+                name = L["Size"], min = 6, max = 36, step = 1,
+                get = PlayerAuraTypeGet(typeKey, "stackSize", 16),
+                set = PlayerAuraTypeRangeSet(typeKey, "stackSize"),
+                hidden = stackHiddenFn,
+            },
+            stackStyle = {
+                type = "select", order = 53, width = 0.8,
+                name = L["Outline"], values = OUTLINE_OPTIONS,
+                get = PlayerAuraTypeGet(typeKey, "stackStyle", C.Defaults.Category.StackStyle),
+                set = PlayerAuraTypeSet(typeKey, "stackStyle"),
+                hidden = stackHiddenFn,
+            },
+            stackColor = {
+                type = "color", order = 54, width = 0.8,
+                name = L["Color"], hasAlpha = true,
+                get = PlayerAuraTypeColorGet(typeKey, "stackColor", C.Colors.White),
+                set = PlayerAuraTypeColorSet(typeKey, "stackColor"),
+                hidden = stackHiddenFn,
+            },
+            stackPosTopSpacing = SectionSpacer(59.95, stackHiddenFn),
+            stackPosHeader = { type = "header", name = L["Positioning"], order = 60, hidden = stackHiddenFn },
+            stackPosBottomSpacing = SectionSpacer(60.05, stackHiddenFn),
+            stackAnchor = {
+                type = "select", order = 61,
+                name = L["Anchor Point"], values = ANCHOR_OPTIONS,
+                get = PlayerAuraTypeGet(typeKey, "stackAnchor", C.Defaults.Category.StackAnchor),
+                set = PlayerAuraTypeSet(typeKey, "stackAnchor"),
+                hidden = stackHiddenFn,
+            },
+            stackOffsetX = {
+                type = "range", order = 62, width = "half",
+                name = L["Offset X"], min = -20, max = 20, step = 1,
+                get = PlayerAuraTypeGet(typeKey, "stackOffsetX", -3),
+                set = PlayerAuraTypeRangeSet(typeKey, "stackOffsetX"),
+                hidden = stackHiddenFn,
+            },
+            stackOffsetY = {
+                type = "range", order = 63, width = "half",
+                name = L["Offset Y"], min = -20, max = 20, step = 1,
+                get = PlayerAuraTypeGet(typeKey, "stackOffsetY", 3),
+                set = PlayerAuraTypeRangeSet(typeKey, "stackOffsetY"),
+                hidden = stackHiddenFn,
+            },
+        },
+    }
+end
+
+-- =========================================================================
+-- OPTIONS BUILDER
+-- =========================================================================
+
+local function CreateCategoryOptions(order, name, key, desc)
+    local isUnitframe = (key == C.Categories.Unitframe)
+    local isNameplate = (key == C.Categories.Nameplate)
+    local disabledFn    = function() return IsCatDisabled(key) end
+    local stackHiddenFn = function() return IsStackHidden(key) end
+    local isCooldownManager = (key == C.Categories.CooldownManager)
+    local isHealerCC = (key == C.Categories.HealerCC)
+    local isMiniAuras = (key == C.Categories.MiniAuras)
+    local isMyDRs = (key == C.Categories.MyDRs)
+    local isSArena = (key == C.Categories.SArena)
+    local isShackled = (key == C.Categories.Shackled)
+    local isTellMeWhen = (key == C.Categories.TellMeWhen)
+    local isPlayerAura = (key == C.Categories.PlayerAura)
+    local isActionbar = (key == C.Categories.Actionbar)
+    local isStackCategory = (key == C.Categories.Actionbar or key == C.Categories.Nameplate or key == C.Categories.CooldownManager or key == C.Categories.Unitframe or isPlayerAura)
+    local allowsThresholdColors = not isMiniAuras and not isNameplate
+    local allowThresholdColorsGet = allowsThresholdColors
+        and CatGet(key, "allowThresholdColors", GetAllowThresholdDefault(key)) or nil
+    -- Explicit if/elseif rather than an `and/or` chain: Shackled's own
+    -- ReverseSwipe default is false, and `cond and false or fallback` always
+    -- picks the fallback in Lua, silently discarding a false default.
+    local reverseSwipeDefault
+    if isMyDRs then
+        reverseSwipeDefault = C.Defaults.MyDRs.ReverseSwipe
+    elseif isShackled then
+        reverseSwipeDefault = C.Defaults.Shackled.ReverseSwipe
+    else
+        reverseSwipeDefault = C.Defaults.Actionbar.ReverseSwipe
+    end
+    local allowThresholdColorsSet = allowsThresholdColors
+        and CatSet(key, "allowThresholdColors") or nil
+
+    return {
+        type = "group",
+        hidden = function()
+            return (isHealerCC and not MCE:IsHealerCCAvailable())
+                or (isMiniAuras and not MCE:IsMiniAurasAvailable())
+                or (isMyDRs and not MCE:IsMyDRsAvailable())
+                or (isSArena and not MCE:IsSArenaAvailable())
+                or (isShackled and not MCE:IsShackledAvailable())
+                or (isTellMeWhen and not MCE:IsTellMeWhenAvailable())
+        end,
+        -- Dynamic name with status indicator (colored accent when active, dimmed when inactive)
+        name = function()
+            if not MCE.db or not MCE.db.profile then return name end
+            local enabled = MCE.db.profile.categories[key].enabled
+                and not IsCategoryStylingBlocked(key)
+            if enabled then
+                return "|cff33ff99" .. L["ON"] .. "|r  " .. name
+            else
+                return "|cff555555" .. L["OFF"] .. "|r  |cff888888" .. name .. "|r"
+            end
+        end,
+        order = order,
+        args = {
+            -- ── 1. Main Toggle ──────────────────────────────────────────
+            enableGroup = {
+                type = "group", name = "", inline = true, order = 1,
+                args = {
+                    enabled = {
+                        type = "toggle", order = 1, width = "full",
+                        name = "|cff33ff99" .. format(L["Enable %s"], name) .. "|r",
+                        desc = function()
+                            return GetCategoryConflictWarning(key)
+                                or L["Toggle styling for this category."]
+                        end,
+                        get = function()
+                            return MCE.db.profile.categories[key].enabled
+                                and not IsCategoryStylingBlocked(key)
+                        end,
+                        set = SetCategoryEnabled(key),
+                        disabled = function()
+                            return IsCategoryStylingBlocked(key)
+                        end,
+                    },
+                    miniAurasTestToggle = isMiniAuras and {
+                        type = "execute", order = 2, width = "1",
+                        name = L["Toggle Test Icons"],
+                        desc = L["Toggle MiniAuras' built-in test icons using /miniauras test."],
+                        hidden = function() return not MCE:IsMiniAurasAvailable() end,
+                        func = function()
+                            local handler = SlashCmdList and SlashCmdList.MINIAURAS
+                            if handler then
+                                pcall(handler, "test")
+                            else
+                                MCE:Print(L["MiniAuras test command is unavailable."])
+                            end
+                            C_Timer.After(0, function()
+                                MCE:ForceUpdateAll(true)
+                            end)
+                        end,
+                    } or nil,
+                    myDRsTestToggle = isMyDRs and {
+                        type = "execute", order = 2, width = "1",
+                        name = L["Toggle Test Icons"],
+                        desc = L["Toggle MyDRs' built-in test icons using /mydrs test."],
+                        hidden = function() return not MCE:IsMyDRsAvailable() end,
+                        func = function()
+                            local handler = SlashCmdList and SlashCmdList.ACECONSOLE_MYDRS
+                            if handler then
+                                pcall(handler, "test")
+                                C_Timer.After(0, function()
+                                    MCE:ForceUpdateAll(true)
+                                end)
+                            else
+                                MCE:Print(L["MyDRs test command is unavailable."])
+                            end
+                        end,
+                    } or nil,
+                    sArenaTestToggle = isSArena and {
+                        type = "execute", order = 2, width = "1",
+                        name = L["Show Test Frames"],
+                        desc = L["Show sArena test frames using /sarena test."],
+                        hidden = function() return not MCE:IsSArenaAvailable() end,
+                        func = function()
+                            local handler = SlashCmdList and SlashCmdList.ACECONSOLE_SARENA
+                            if handler then
+                                pcall(handler, "test")
+                                C_Timer.After(0, function()
+                                    MCE:ForceUpdateAll(true)
+                                end)
+                            else
+                                MCE:Print(L["sArena slash command is unavailable."])
+                            end
+                        end,
+                    } or nil,
+                    sArenaHideToggle = isSArena and {
+                        type = "execute", order = 3, width = "1",
+                        name = L["Hide Test Frames"],
+                        desc = L["Hide sArena test frames using /sarena hide."],
+                        hidden = function() return not MCE:IsSArenaAvailable() end,
+                        func = function()
+                            local handler = SlashCmdList and SlashCmdList.ACECONSOLE_SARENA
+                            if handler then
+                                pcall(handler, "hide")
+                                C_Timer.After(0, function()
+                                    MCE:ForceUpdateAll(true)
+                                end)
+                            else
+                                MCE:Print(L["sArena slash command is unavailable."])
+                            end
+                        end,
+                    } or nil,
+                },
+            },
+
+            categoryOverview = desc and {
+                type = "group", name = "", inline = true, order = 2,
+                args = {
+                    addonConflictNotice = (isUnitframe or isNameplate) and {
+                        type = "description", order = 0.05, fontSize = "medium", width = "full",
+                        name = function()
+                            return "|cffff7a1a(!) "
+                                .. (GetCategoryConflictWarning(key) or "") .. "|r"
+                        end,
+                        hidden = function()
+                            return GetCategoryConflictWarning(key) == nil
+                        end,
+                    } or nil,
+                    catDesc = {
+                        type = "description", order = 0.1, fontSize = "medium", width = "full",
+                        name = BuildCategoryDescription(desc),
+                    },
+                    bottomSpacing = SectionSpacer(0.12),
+                },
+            } or nil,
+
+            playerAuraTargets = isPlayerAura and {
+                type = "group", name = "|cffffd100" .. L["Aura Targets"] .. "|r",
+                inline = true, order = 5, disabled = disabledFn,
+                args = {
+                    styleBuffs = {
+                        type = "toggle", order = 1, width = 1,
+                        name = L["Style Buffs"],
+                        desc = L["Style Blizzard's default player buff buttons."],
+                        get = PlayerAuraTypeGet(PLAYER_AURA_TYPE.Buff, "enabled", true),
+                        set = PlayerAuraTypeSet(PLAYER_AURA_TYPE.Buff, "enabled"),
+                    },
+                    styleDebuffs = {
+                        type = "toggle", order = 2, width = 1,
+                        name = L["Style Debuffs"],
+                        desc = L["Style Blizzard's default player debuff buttons."],
+                        get = PlayerAuraTypeGet(PLAYER_AURA_TYPE.Debuff, "enabled", true),
+                        set = PlayerAuraTypeSet(PLAYER_AURA_TYPE.Debuff, "enabled"),
+                    },
+                    styleExternalDefensiveBuffs = {
+                        type = "toggle", order = 3, width = 1.3,
+                        name = L["Style External Defensive Buffs"],
+                        desc = L["Style Blizzard's external defensive buff buttons."],
+                        get = PlayerAuraTypeGet(PLAYER_AURA_TYPE.ExternalDefensiveBuffs, "enabled", false),
+                        set = PlayerAuraTypeSet(PLAYER_AURA_TYPE.ExternalDefensiveBuffs, "enabled"),
+                    },
+                    disableFading = {
+                        type = "toggle", order = 4, width = "full",
+                        name = L["Disable fading/blinking"],
+                        desc = L["Keeps player aura buttons fully opaque when they are close to expiring."],
+                        get = CatGet(key, "disableFading", false),
+                        set = CatSet(key, "disableFading"),
+                    },
+                },
+            } or nil,
+
+            playerAuraBuffStyle = isPlayerAura and BuildPlayerAuraTypeOptions(
+                PLAYER_AURA_TYPE.Buff, L["Buff Styling"], 10
+            ) or nil,
+
+            playerAuraStyleSpacing = isPlayerAura and SectionSpacer(19.8, function()
+                return IsPlayerAuraTypeUnchecked(PLAYER_AURA_TYPE.Debuff)
+            end) or nil,
+
+            playerAuraDebuffStyle = isPlayerAura and BuildPlayerAuraTypeOptions(
+                PLAYER_AURA_TYPE.Debuff, L["Debuff Styling"], 20
+            ) or nil,
+
+            playerAuraExternalDefensiveBuffsStyleSpacing = isPlayerAura and SectionSpacer(29.8, function()
+                return IsPlayerAuraTypeUnchecked(PLAYER_AURA_TYPE.ExternalDefensiveBuffs)
+            end) or nil,
+
+            playerAuraExternalDefensiveBuffsStyle = isPlayerAura and BuildPlayerAuraTypeOptions(
+                PLAYER_AURA_TYPE.ExternalDefensiveBuffs, L["External Defensive Buffs Styling"], 30
+            ) or nil,
+
+            unitframeAuraVisibility = isUnitframe and {
+                type = "group", name = "|cffffd100" .. L["Aura Visibility"] .. "|r",
+                inline = true, order = 5, disabled = disabledFn,
+                args = {
+                    onlyMineDebuffs = {
+                        type = "toggle", order = 1, width = 1.3,
+                        name = L["Only My Debuffs"],
+                        desc = L["UNITFRAME_ONLY_MINE_DEBUFFS_DESC"],
+                        get = CatGet(key, "onlyMineDebuffs", true),
+                        set = CatSet(key, "onlyMineDebuffs"),
+                    },
+                    onlyMineBuffs = {
+                        type = "toggle", order = 2, width = 1.3,
+                        name = L["Only My Buffs"],
+                        desc = L["UNITFRAME_ONLY_MINE_BUFFS_DESC"],
+                        get = CatGet(key, "onlyMineBuffs", false),
+                        set = CatSet(key, "onlyMineBuffs"),
+                    },
+                },
+            } or nil,
+
+            unitframeCastBar = isUnitframe and {
+                type = "group", name = "|cffffd100" .. L["Cast Bar"] .. "|r",
+                inline = true, order = 6, disabled = disabledFn,
+                args = {
+                    castBarReposition = {
+                        type = "toggle", order = 1, width = 2.6,
+                        name = L["Reposition Cast Bar"],
+                        desc = L["UNITFRAME_CASTBAR_REPOSITION_DESC"],
+                        get = CatGet(key, "castBarReposition", true),
+                        set = CatSet(key, "castBarReposition"),
+                    },
+                },
+            } or nil,
+
+            -- ── 2. Typography ───────────────────────────────────────────
+            typography = (not isPlayerAura) and {
+                type = "group", name = "|cffffd100" .. L["Typography (Cooldown Numbers)"] .. "|r",
+                inline = true, order = 10, disabled = disabledFn,
+                args = {
+                    font = {
+                        type = "select", order = 1, width = 1.5,
+                        name = L["Font Face"], values = GetFontOptions,
+                        get = CatGet(key, "font"), set = CatSet(key, "font"),
+                    },
+                    fontSize = {
+                        type = "range", order = 2, width = 0.7,
+                        name = L["Size"], min = 6, max = 36, step = 1,
+                        get = CatGet(key, "fontSize"), set = CatRangeSet(key, "fontSize"),
+                        hidden = function() return isCooldownManager or isHealerCC or isMiniAuras or isSArena end,
+                    },
+                    fontStyle = {
+                        type = "select", order = 3, width = 0.8,
+                        name = L["Outline"], values = OUTLINE_OPTIONS,
+                        get = CatGet(key, "fontStyle"), set = CatSet(key, "fontStyle"),
+                    },
+                    textColor = {
+                        type = "color", order = 4, width = "half",
+                        name = L["Color"], hasAlpha = true,
+                        get = CatColorGet(key, "textColor"),
+                        set = CatColorSet(key, "textColor"),
+                    },
+                    allowThresholdColors = allowsThresholdColors and {
+                        type = "toggle", order = 4.5, width = "full",
+                        name = L["Allow Threshold Colors"],
+                        desc = L["Allows the global \"Color by Remaining Time\" thresholds to override this category's static text color."],
+                        get = allowThresholdColorsGet,
+                        set = allowThresholdColorsSet,
+                        hidden = function() return isHealerCC or isSArena or isPlayerAura end,
+                    } or nil,
+                    miniAurasCountdownColorsNotice = isMiniAuras and {
+                        type = "description", order = 4.5, width = "full", fontSize = "small",
+                        name = "|cffffd100" .. L["MINIAURAS_COUNTDOWN_COLORS_NOTICE"] .. "|r",
+                    } or nil,
+                    hideCountdownNumbers = {
+                        type = "toggle", order = 5, width = "1",
+                        name = L["Hide Numbers"],
+                        desc = L["Hide the text entirely (useful if you only want the swipe edge or stacks)."],
+                        get = CatGet(key, "hideCountdownNumbers"),
+                        set = CatSet(key, "hideCountdownNumbers"),
+                        hidden = function() return isMiniAuras or isSArena or isTellMeWhen end,
+                    },
+                    auraCdTextOnlyMine = isUnitframe and {
+                        type = "toggle", order = 5.005, width = "1",
+                        name = L["Only Mine (Timer Text)"],
+                        desc = L["UNITFRAME_ONLY_MINE_DESC"],
+                        get = CatGet(key, "auraCdTextOnlyMine", true),
+                        set = CatSet(key, "auraCdTextOnlyMine"),
+                        disabled = function()
+                            return MCE.db.profile.categories[key].hideCountdownNumbers == true
+                        end,
+                    } or nil,
+                    hideStackText = isStackCategory and {
+                        type = "toggle", order = 5.01, width = "1",
+                        name = L["Hide Stack Text"],
+                        desc = L["Hide stacks and charges entirely."],
+                        get = CatGet(key, "hideStackText", false),
+                        set = CatSet(key, "hideStackText"),
+                    } or nil,
+                    disableFading = isPlayerAura and {
+                        type = "toggle", order = 5.015, width = "full",
+                        name = L["Disable fading/blinking"],
+                        desc = L["Keeps player aura buttons fully opaque when they are close to expiring."],
+                        get = CatGet(key, "disableFading", false),
+                        set = CatSet(key, "disableFading"),
+                    } or nil,
+                    hideChargeTimers = (key == C.Categories.Actionbar) and {
+                        type = "toggle", order = 5.02, width = "full",
+                        name = L["Hide Charge Timers"],
+                        desc = L["Hide timers while charges are restoring (only show timer when all charges are spent)."],
+                        get = function()
+                            return MCE.db.profile.categories[C.Categories.Actionbar].hideChargeTimers and true or false
+                        end,
+                        set = function(_, val)
+                            MCE.db.profile.categories[C.Categories.Actionbar].hideChargeTimers = val and true or false
+                            MCE:ForceUpdateAll(false)
+                            AceConfigRegistry:NotifyChange(addonName)
+                        end,
+                    } or nil,
+                    cooldownManagerHeaderTopSpacing = isCooldownManager and SectionSpacer(5.05) or nil,
+                    cooldownManagerHeader = isCooldownManager and {
+                        type = "header", name = L["CooldownManager Viewers"], order = 5.1,
+                    } or nil,
+                    cooldownManagerHeaderBottomSpacing = isCooldownManager and SectionSpacer(5.15) or nil,
+                    cooldownManagerCenteredConflictNotice = isCooldownManager and {
+                        type = "description", order = 5.16, width = "full", fontSize = "small",
+                        name = function()
+                            return "|cffff7a1a" .. (GetCooldownManagerCenteredTimerConflictMessage() or "") .. "|r"
+                        end,
+                        hidden = function()
+                            return not HasCooldownManagerCenteredTimerConflict()
+                        end,
+                    } or nil,
+                    essentialFontSize = isCooldownManager and {
+                        type = "range", order = 5.2, width = "full",
+                        name = L["Essential Viewer Size"], min = 6, max = 36, step = 1,
+                        get = CatGet(key, "essentialFontSize", 18),
+                        set = CatRangeSet(key, "essentialFontSize"),
+                    } or nil,
+                    utilityFontSize = isCooldownManager and {
+                        type = "range", order = 5.3, width = "full",
+                        name = L["Utility Viewer Size"], min = 6, max = 36, step = 1,
+                        get = CatGet(key, "utilityFontSize", 18),
+                        set = CatRangeSet(key, "utilityFontSize"),
+                    } or nil,
+                    buffIconFontSize = isCooldownManager and {
+                        type = "range", order = 5.4, width = "full",
+                        name = L["Buff Icon Viewer Size"], min = 6, max = 36, step = 1,
+                        get = CatGet(key, "buffIconFontSize", 18),
+                        set = CatRangeSet(key, "buffIconFontSize"),
+                    } or nil,
+                    essentialStackSize = isCooldownManager and {
+                        type = "range", order = 5.41, width = "full",
+                        name = L["Essential Viewer Stack Size"], min = 6, max = 36, step = 1,
+                        get = CatGet(key, "essentialStackSize", C.Defaults.CooldownManager.EssentialStackSize),
+                        set = CatRangeSet(key, "essentialStackSize"),
+                        hidden = stackHiddenFn,
+                    } or nil,
+                    utilityStackSize = isCooldownManager and {
+                        type = "range", order = 5.42, width = "full",
+                        name = L["Utility Viewer Stack Size"], min = 6, max = 36, step = 1,
+                        get = CatGet(key, "utilityStackSize", C.Defaults.CooldownManager.UtilityStackSize),
+                        set = CatRangeSet(key, "utilityStackSize"),
+                        hidden = stackHiddenFn,
+                    } or nil,
+                    buffIconStackSize = isCooldownManager and {
+                        type = "range", order = 5.43, width = "full",
+                        name = L["Buff Icon Viewer Stack Size"], min = 6, max = 36, step = 1,
+                        get = CatGet(key, "buffIconStackSize", C.Defaults.CooldownManager.BuffIconStackSize),
+                        set = CatRangeSet(key, "buffIconStackSize"),
+                        hidden = stackHiddenFn,
+                    } or nil,
+                    auraColorEnabled = isCooldownManager and {
+                        type = "toggle", order = 5.45, width = 0.8,
+                        name = L["Use Buff Color"],
+                        desc = L["When a CooldownManager slot is temporarily showing aura time, use a dedicated buff color instead of remaining-time threshold colors."],
+                        get = CatGet(key, "auraColorEnabled", true),
+                        set = CatSet(key, "auraColorEnabled"),
+                    } or nil,
+                    auraColor = isCooldownManager and {
+                        type = "color", order = 5.46, width = 1, hasAlpha = true,
+                        name = L["Buff Color"],
+                        desc = L["Applied while the slot is showing aura duration. When the aura ends and the slot switches back to cooldown time, threshold colors resume."],
+                        get = CatColorGet(key, "auraColor"),
+                        set = CatColorSet(key, "auraColor"),
+                        disabled = function()
+                            return MCE.db.profile.categories[key].auraColorEnabled == false
+                        end,
+                    } or nil,
+                    miniAurasHeaderTopSpacing = isMiniAuras and SectionSpacer(5.05) or nil,
+                    miniAurasHeader = isMiniAuras and {
+                        type = "header", name = L["MiniAuras Module Groups"], order = 5.1,
+                    } or nil,
+                    miniAurasHeaderBottomSpacing = isMiniAuras and SectionSpacer(5.15) or nil,
+                    miniAurasGroupsDesc = isMiniAuras and {
+                        type = "description", order = 5.18, width = "full", fontSize = "small",
+                        name = "|cff88bbdd" .. L["MiniAuras text settings are grouped by module family so similar widgets share the same countdown size."] .. "|r",
+                    } or nil,
+                    ccFontSize = isMiniAuras and {
+                        type = "range", order = 5.2, width = 1.2,
+                        name = L["CC Frames Text Size"],
+                        desc = L["Applies to MiniAuras CC module (enemy crowd controls)."],
+                        min = 6, max = 36, step = 1,
+                        get = CatGet(key, "ccFontSize", 18),
+                        set = CatRangeSet(key, "ccFontSize"),
+                    } or nil,
+                    ccHideCountdownNumbers = isMiniAuras and {
+                        type = "toggle", order = 5.25, width = 0.8,
+                        name = L["Hide Numbers"],
+                        desc = L["Hide the text entirely (useful if you only want the swipe edge or stacks)."],
+                        get = CatGet(key, "ccHideCountdownNumbers", false),
+                        set = CatSet(key, "ccHideCountdownNumbers"),
+                    } or nil,
+                    ccHideSwipe = isMiniAuras and {
+                        type = "toggle", order = 5.27, width = 0.8,
+                        name = L["Hide Swipe"],
+                        desc = L["Hide the swipe animation for this frame group (countdown text still shows)."],
+                        get = CatGet(key, "ccHideSwipe", false),
+                        set = CatSet(key, "ccHideSwipe"),
+                    } or nil,
+                    ccRowBreak = isMiniAuras and RowBreak(5.29) or nil,
+                    raidFrameAuraFontSize = isMiniAuras and {
+                        type = "range", order = 5.291, width = 1.2,
+                        name = L["Raid Frame Auras Text Size"],
+                        desc = L["Applies to the MiniAuras Raid Frame Auras module."],
+                        min = 6, max = 36, step = 1,
+                        get = CatGet(key, "raidFrameAuraFontSize", 18),
+                        set = CatRangeSet(key, "raidFrameAuraFontSize"),
+                    } or nil,
+                    raidFrameAuraHideCountdownNumbers = isMiniAuras and {
+                        type = "toggle", order = 5.292, width = 0.8,
+                        name = L["Hide Numbers"],
+                        desc = L["Hide the text entirely (useful if you only want the swipe edge or stacks)."],
+                        get = CatGet(key, "raidFrameAuraHideCountdownNumbers", false),
+                        set = CatSet(key, "raidFrameAuraHideCountdownNumbers"),
+                    } or nil,
+                    raidFrameAuraHideSwipe = isMiniAuras and {
+                        type = "toggle", order = 5.2925, width = 0.8,
+                        name = L["Hide Swipe"],
+                        desc = L["Hide the swipe animation for this frame group (countdown text still shows)."],
+                        get = CatGet(key, "raidFrameAuraHideSwipe", false),
+                        set = CatSet(key, "raidFrameAuraHideSwipe"),
+                    } or nil,
+                    raidFrameAuraRowBreak = isMiniAuras and RowBreak(5.293) or nil,
+                    portraitFontSize = isMiniAuras and {
+                        type = "range", order = 5.4, width = 1.2,
+                        name = L["Portraits Text Size"],
+                        desc = L["Applies to MiniAuras portrait icons."],
+                        min = 6, max = 36, step = 1,
+                        get = CatGet(key, "portraitFontSize", 18),
+                        set = CatRangeSet(key, "portraitFontSize"),
+                    } or nil,
+                    portraitHideCountdownNumbers = isMiniAuras and {
+                        type = "toggle", order = 5.45, width = 0.8,
+                        name = L["Hide Numbers"],
+                        desc = L["Hide the text entirely (useful if you only want the swipe edge or stacks)."],
+                        get = CatGet(key, "portraitHideCountdownNumbers", false),
+                        set = CatSet(key, "portraitHideCountdownNumbers"),
+                    } or nil,
+                    portraitHideSwipe = isMiniAuras and {
+                        type = "toggle", order = 5.47, width = 0.8,
+                        name = L["Hide Swipe"],
+                        desc = L["Hide the swipe animation for this frame group (countdown text still shows)."],
+                        get = CatGet(key, "portraitHideSwipe", false),
+                        set = CatSet(key, "portraitHideSwipe"),
+                    } or nil,
+                    portraitRowBreak = isMiniAuras and RowBreak(5.49) or nil,
+                    overlayFontSize = isMiniAuras and {
+                        type = "range", order = 5.5, width = 1.2,
+                        name = L["Alerts / Trackers / Custom Auras Text Size"],
+                        desc = L["Applies to MiniAuras Alerts, Healer CC, Kick Timer, Precognition, Trinkets, and Custom Auras modules."],
+                        min = 6, max = 36, step = 1,
+                        get = CatGet(key, "overlayFontSize", 18),
+                        set = CatRangeSet(key, "overlayFontSize"),
+                    } or nil,
+                    overlayHideCountdownNumbers = isMiniAuras and {
+                        type = "toggle", order = 5.55, width = 0.8,
+                        name = L["Hide Numbers"],
+                        desc = L["Hide the text entirely (useful if you only want the swipe edge or stacks)."],
+                        get = CatGet(key, "overlayHideCountdownNumbers", false),
+                        set = CatSet(key, "overlayHideCountdownNumbers"),
+                    } or nil,
+                    overlayHideSwipe = isMiniAuras and {
+                        type = "toggle", order = 5.57, width = 0.8,
+                        name = L["Hide Swipe"],
+                        desc = L["Hide the swipe animation for this frame group (countdown text still shows)."],
+                        get = CatGet(key, "overlayHideSwipe", false),
+                        set = CatSet(key, "overlayHideSwipe"),
+                    } or nil,
+                    sArenaHeaderTopSpacing = isSArena and SectionSpacer(5.05) or nil,
+                    sArenaHeader = isSArena and {
+                        type = "header", name = L["sArena Cooldown Types"], order = 5.1,
+                    } or nil,
+                    sArenaHeaderBottomSpacing = isSArena and SectionSpacer(5.15) or nil,
+                    classIconFontSize = isSArena and {
+                        type = "range", order = 5.2, width = "full",
+                        name = L["Class Icon Text Size"], min = 6, max = 36, step = 1,
+                        get = CatGet(key, "classIconFontSize", 18),
+                        set = CatRangeSet(key, "classIconFontSize"),
+                    } or nil,
+                    drFontSize = isSArena and {
+                        type = "range", order = 5.3, width = "full",
+                        name = L["DR Cooldown Text Size"], min = 6, max = 36, step = 1,
+                        get = CatGet(key, "drFontSize", 18),
+                        set = CatRangeSet(key, "drFontSize"),
+                    } or nil,
+                    trinketRacialFontSize = isSArena and {
+                        type = "range", order = 5.4, width = "full",
+                        name = L["Trinket / Racial Text Size"], min = 6, max = 36, step = 1,
+                        get = CatGet(key, "trinketRacialFontSize", 18),
+                        set = CatRangeSet(key, "trinketRacialFontSize"),
+                    } or nil,
+                    -- Positioning sub-section
+                    posHeaderTopSpacing = SectionSpacer(5.95),
+                    posHeader = { type = "header", name = L["Positioning"], order = 6 },
+                    posHeaderBottomSpacing = SectionSpacer(6.05),
+                    textAnchor = {
+                        type = "select", order = 7,
+                        name = L["Anchor Point"], values = ANCHOR_OPTIONS,
+                        get = CatGet(key, "textAnchor", C.Style.Anchors.Center),
+                        set = CatSet(key, "textAnchor"),
+                        hidden = function() return isPlayerAura end,
+                    },
+                    textOffsetX = {
+                        type = "range", order = 8, width = "half",
+                        name = L["Offset X"], min = -30, max = 30, step = 1,
+                        get = CatGet(key, "textOffsetX", 0),
+                        set = CatRangeSet(key, "textOffsetX"),
+                    },
+                    textOffsetY = {
+                        type = "range", order = 9, width = "half",
+                        name = L["Offset Y"], min = -30, max = 30, step = 1,
+                        get = CatGet(key, "textOffsetY", 0),
+                        set = CatRangeSet(key, "textOffsetY"),
+                    },
+                },
+            } or nil,
+            -- ── 3. Swipe Edge ───────────────────────────────────────────
+            swipeEdge = (not isPlayerAura) and {
+                type = "group", name = "|cffffd100"
+                    .. (isTellMeWhen and L["Swipe Edge"] or L["Swipe Animation"]) .. "|r",
+                inline = true, order = 20, disabled = disabledFn,
+                args = {
+                    drawSwipe = (not isTellMeWhen) and {
+                        type = "toggle", order = 0, width = 1.20,
+                        name = L["Show Swipe Animation"],
+                        desc = L["Shows the dark overlay that sweeps during a cooldown."],
+                        get = CatGet(key, "drawSwipe", true),
+                        set = CatSet(key, "drawSwipe"),
+                    } or nil,
+                    swipeAlpha = (isActionbar or isPlayerAura or isMiniAuras or isMyDRs or isShackled) and {
+                        type = "range", order = 1, width = 1,
+                        name = L["Swipe Shade Alpha"],
+                        desc = isMiniAuras and L["MINIAURAS_SWIPE_ALPHA_DESC"]
+                            or isMyDRs and L["MYDRS_SWIPE_ALPHA_DESC"]
+                            or isShackled and L["SHACKLED_SWIPE_ALPHA_DESC"]
+                            or L["0% = transparent, 100% = full dark."],
+                        min = 0, max = 100, step = 1,
+                        get = CatGet(key, "swipeAlpha", C.Styler.DefaultSwipeAlpha),
+                        set = CatRangeSet(key, "swipeAlpha"),
+                    } or nil,
+                    swipeEdgeRowBreak1 = (not isTellMeWhen) and RowBreak(1.1) or nil,
+                    edgeEnabled = {
+                        type = "toggle", order = 2, width = "1",
+                        name = L["Show Swipe Edge"],
+                        desc = L["Shows the white line indicating cooldown progress."],
+                        get = CatGet(key, "edgeEnabled"),
+                        set = CatSet(key, "edgeEnabled"),
+                    },
+                    edgeScale = {
+                        type = "range", order = 3, width = "2",
+                        name = L["Edge Thickness"],
+                        desc = isTellMeWhen and L["TELLMEWHEN_EDGE_SCALE_DESC"]
+                            or L["Scale of the swipe line (1.0 = Default)."],
+                        min = 0.5, max = 2.0, step = 0.1,
+                        get = CatGet(key, "edgeScale"),
+                        set = CatRangeSet(key, "edgeScale"),
+                    },
+                    reverseSwipe = (isActionbar or isMyDRs or isShackled) and {
+                        type = "toggle", order = 4, width = "full",
+                        name = L["Reverse Swipe"],
+                        desc = L["Reverse the swipe direction so the shade fills in the opposite direction."],
+                        get = CatGet(key, "reverseSwipe", reverseSwipeDefault),
+                        set = CatSet(key, "reverseSwipe"),
+                    } or nil,
+                },
+            } or nil,
+
+            -- ── 4. Stack Counters / Charges ────────────────────────────
+            stackGroup = (isStackCategory and not isPlayerAura) and {
+                type = "group", name = "|cffffd100" .. L["Stack Counters / Charges"] .. "|r",
+                inline = true, order = 30, disabled = disabledFn,
+                hidden = function()
+                    return MCE.db.profile.categories[key].hideStackText
+                end,
+                args = {
+                    stackEnabled = {
+                        type = "toggle", order = 2, width = "full",
+                        name = L["Customize Stack Text"],
+                        desc = L["Take control over the charge counter (e.g., 2 stacks of Conflagrate)."],
+                        get = CatGet(key, "stackEnabled"),
+                        set = CatSet(key, "stackEnabled"),
+                    },
+                    -- Style sub-section
+                    headerStyleTopSpacing = SectionSpacer(9.95, stackHiddenFn),
+                    headerStyle = { type = "header", name = L["Style"], order = 10, hidden = stackHiddenFn },
+                    headerStyleBottomSpacing = SectionSpacer(10.05, stackHiddenFn),
+                    stackFont = {
+                        type = "select", order = 11, width = 1.5,
+                        name = L["Font"], values = GetFontOptions,
+                        get = CatGet(key, "stackFont"), set = CatSet(key, "stackFont"),
+                        hidden = stackHiddenFn,
+                    },
+                    stackSize = {
+                        type = "range", order = 12, width = 0.7,
+                        name = L["Size"], min = 6, max = 36, step = 1,
+                        get = CatGet(key, "stackSize"), set = CatRangeSet(key, "stackSize"),
+                        hidden = function() return stackHiddenFn() or isCooldownManager end,
+                    },
+                    stackStyle = {
+                        type = "select", order = 13, width = 0.8,
+                        name = L["Outline"], values = OUTLINE_OPTIONS,
+                        get = CatGet(key, "stackStyle"), set = CatSet(key, "stackStyle"),
+                        hidden = stackHiddenFn,
+                    },
+                    stackColor = {
+                        type = "color", order = 14, width = 0.8,
+                        name = L["Color"], hasAlpha = true,
+                        get = CatColorGet(key, "stackColor"),
+                        set = CatColorSet(key, "stackColor"),
+                        hidden = stackHiddenFn,
+                    },
+                    -- Position sub-section
+                    headerPosTopSpacing = SectionSpacer(19.95, stackHiddenFn),
+                    headerPos = { type = "header", name = L["Positioning"], order = 20, hidden = stackHiddenFn },
+                    headerPosBottomSpacing = SectionSpacer(20.05, stackHiddenFn),
+                    stackAnchor = {
+                        type = "select", order = 21,
+                        name = L["Anchor Point"], values = ANCHOR_OPTIONS,
+                        get = CatGet(key, "stackAnchor"), set = CatSet(key, "stackAnchor"),
+                        hidden = stackHiddenFn,
+                    },
+                    stackOffsetX = {
+                        type = "range", order = 22, width = "half",
+                        name = L["Offset X"], min = -20, max = 20, step = 1,
+                        get = CatGet(key, "stackOffsetX"), set = CatRangeSet(key, "stackOffsetX"),
+                        hidden = stackHiddenFn,
+                    },
+                    stackOffsetY = {
+                        type = "range", order = 23, width = "half",
+                        name = L["Offset Y"], min = -20, max = 20, step = 1,
+                        get = CatGet(key, "stackOffsetY"), set = CatRangeSet(key, "stackOffsetY"),
+                        hidden = stackHiddenFn,
+                    },
+                },
+            } or nil,
+
+            -- ── 5. Maintenance ──────────────────────────────────────────
+            maintenance = {
+                type = "group", name = "|cff999999" .. L["Maintenance"] .. "|r",
+                inline = true, order = 100,
+                args = {
+                    maintenanceDesc = {
+                        type = "description", order = 0, fontSize = "small",
+                        name = "|cff666666" .. L["MAINTENANCE_DESC"] .. "|r\n",
+                    },
+                    resetCategory = {
+                        type = "execute", order = 1, width = "full",
+                        name = "|cffff8888" .. format(L["Reset %s"], name) .. "|r",
+                        desc = L["Revert this category to default settings."],
+                        confirm = true,
+                        func = function()
+                            local needsFullScan = CategoryNeedsFullScan(key)
+                            MCE.db.profile.categories[key] = CopyTable(MCE.defaults.profile.categories[key])
+                            if OWNERSHIP_CATEGORIES[key] and not needsFullScan then
+                                MCE:InvalidateOwnership()
+                            end
+                            MCE:ForceUpdateAll(needsFullScan)
+                            LibStub("AceConfigRegistry-3.0"):NotifyChange(addonName)
+                            MCE:Print(format(L["%s settings reset."], name))
+                        end,
+                    },
+                },
+            },
+        },
+    }
+end
+
+local function CreatePartyRaidRetiredOptions(order, name)
+    return {
+        type = "group",
+        name = function()
+            return "|cffff8855" .. L["Retired"] .. "|r  |cffdddddd" .. name .. "|r"
+        end,
+        order = order,
+        args = {
+            retiredNotice = {
+                type = "group", name = "|cffff8855" .. name .. " - " .. L["Retired"] .. "|r", inline = true, order = 1,
+                args = {
+                    message = {
+                        type = "description", order = 1, fontSize = "medium", width = "full",
+                        name = "|cffdddddd" .. L["PARTY_RAID_FRAMES_RETIRED_DESC"] .. "|r",
+                    },
+                },
+            },
+            projectSpacing = SectionSpacer(1.1),
+            projectGroup = {
+                type = "group", name = "|cffffd100" .. L["PARTY_RAID_FRAMES_AURAS_TITLE"] .. "|r", inline = true, order = 2,
+                args = {
+                    projectDesc = {
+                        type = "description", order = 1, fontSize = "medium", width = "full",
+                        name = "|cffdddddd" .. L["PARTY_RAID_FRAMES_AURAS_DESC"] .. "|r",
+                    },
+                    projectSpacing = SectionSpacer(1.1),
+                    projectUrl = {
+                        type = "input", order = 2, width = "full",
+                        name = "|cff88bbdd" .. L["Project"] .. "|r",
+                        desc = L["Copy this link to open Raid Frame Auras on CurseForge."],
+                        get = function() return C.Urls.RaidFrameAuras end,
+                        set = function() end,
+                    },
+                },
+            },
+        },
+    }
+end
+
+-- =========================================================================
+-- ROOT OPTIONS TABLE
+-- =========================================================================
+
+function MCE:GetOptions()
+    local profileOpts = LibStub("AceDBOptions-3.0"):GetOptionsTable(MCE.db)
+    -- Reserve the final two root positions for utility pages. Optional adapter
+    -- categories can be added without ever sorting below Profiles or Help.
+    profileOpts.order = 1000
+    profileOpts.args = profileOpts.args or {}
+    profileOpts.args.importExport = BuildProfileImportExportOptions(50)
+
+    return {
+        type = "group",
+        name = C.Chat.Prefix,
+        args = {
+            -- ── General ─────────────────────────────────────────────────
+            general = {
+                type = "group", name = L["General"], order = 1,
+                args = {
+                    banner = {
+                        type = "description", order = 0.1, fontSize = "large",
+                        name = "|cff00ccffMinimalist Cooldown Edge|r |cff888888v" .. addonVersion .. "|r\n|cff666666by Anahkas|r",
+                        image = C.Assets.Icon,
+                        imageWidth = 48, imageHeight = 48,
+                    },
+                    bannerSpacing1 = SectionSpacer(0.2),
+                    bannerDesc = {
+                        type = "description", order = 0.3, fontSize = "medium",
+                        name = "|cffbbbbbb" .. L["BANNER_DESC"] .. "|r\n",
+                    },
+                    bannerSpacing2 = SectionSpacer(0.4),
+                    -- ── Quick Toggles Dashboard ─────────────────────────
+                    quickToggles = {
+                        type = "group", name = "|cffffd100" .. L["Enable categories styling"] .. "|r",
+                        inline = true, order = 1,
+                        args = {
+                            quickDesc = {
+                                type = "description", order = 0, fontSize = "small", width = "full",
+                                name = "|cff888888" .. L["QUICK_TOGGLES_DESC"] .. "|r\n",
+                            },
+                            toggleActionbar = {
+                                type = "toggle", order = 1, width = 1.0,
+                                name = "|cffffd100" .. L["Action Bars"] .. "|r",
+                                get = function() return MCE.db.profile.categories[C.Categories.Actionbar].enabled end,
+                                set = SetDashboardCategoryEnabled(C.Categories.Actionbar),
+                            },
+                            toggleNameplate = {
+                                type = "toggle", order = 2, width = 1.0,
+                                name = "|cffffd100" .. L["Nameplates"] .. "|r",
+                                desc = function()
+                                    return GetCategoryConflictWarning(C.Categories.Nameplate)
+                                        or L["Toggle styling for this category."]
+                                end,
+                                get = function()
+                                    return MCE.db.profile.categories[C.Categories.Nameplate].enabled
+                                        and not IsCategoryStylingBlocked(C.Categories.Nameplate)
+                                end,
+                                set = SetDashboardCategoryEnabled(C.Categories.Nameplate),
+                                disabled = function()
+                                    return IsCategoryStylingBlocked(C.Categories.Nameplate)
+                                end,
+                            },
+                            quickRowBreak1 = RowBreak(2.1),
+                            toggleUnitframe = {
+                                type = "toggle", order = 3, width = 1.0,
+                                name = "|cffffd100" .. L["Unit Frames"] .. "|r",
+                                desc = function()
+                                    return GetCategoryConflictWarning(C.Categories.Unitframe)
+                                        or L["Toggle styling for this category."]
+                                end,
+                                get = function()
+                                    return MCE.db.profile.categories[C.Categories.Unitframe].enabled
+                                        and not IsCategoryStylingBlocked(C.Categories.Unitframe)
+                                end,
+                                set = SetDashboardCategoryEnabled(C.Categories.Unitframe),
+                                disabled = function()
+                                    return IsCategoryStylingBlocked(C.Categories.Unitframe)
+                                end,
+                            },
+                            togglePlayerAura = {
+                                type = "toggle", order = 4, width = 1.0,
+                                name = "|cffffd100" .. L["Player Auras"] .. "|r",
+                                get = function() return MCE.db.profile.categories[C.Categories.PlayerAura].enabled end,
+                                set = SetDashboardCategoryEnabled(C.Categories.PlayerAura),
+                            },
+                            quickRowBreak2 = RowBreak(4.1),
+                            toggleCooldownMgr = {
+                                type = "toggle", order = 5, width = "full",
+                                name = "|cffffd100" .. L["CooldownManager"] .. "|r",
+                                get = function() return MCE.db.profile.categories[C.Categories.CooldownManager].enabled end,
+                                set = SetDashboardCategoryEnabled(C.Categories.CooldownManager),
+                            },
+                            toggleHealerCC = {
+                                type = "toggle", order = 6, width = 0.6,
+                                name = "|cffffd100" .. L["HealerCC"] .. "|r",
+                                hidden = function() return not MCE:IsHealerCCAvailable() end,
+                                get = function() return MCE.db.profile.categories[C.Categories.HealerCC].enabled end,
+                                set = SetDashboardCategoryEnabled(C.Categories.HealerCC),
+                            },
+                            toggleMiniAuras = {
+                                type = "toggle", order = 7, width = 0.6,
+                                name = "|cffffd100" .. L["MiniAuras"] .. "|r",
+                                hidden = function() return not MCE:IsMiniAurasAvailable() end,
+                                get = function() return MCE.db.profile.categories[C.Categories.MiniAuras].enabled end,
+                                set = SetDashboardCategoryEnabled(C.Categories.MiniAuras),
+                            },
+                            toggleMyDRs = {
+                                type = "toggle", order = 7.5, width = 0.6,
+                                name = "|cffffd100" .. L["MyDRs"] .. "|r",
+                                hidden = function() return not MCE:IsMyDRsAvailable() end,
+                                get = function() return MCE.db.profile.categories[C.Categories.MyDRs].enabled end,
+                                set = SetDashboardCategoryEnabled(C.Categories.MyDRs),
+                            },
+                            toggleSArena = {
+                                type = "toggle", order = 8, width = 0.6,
+                                name = "|cffffd100" .. L["sArena"] .. "|r",
+                                hidden = function() return not MCE:IsSArenaAvailable() end,
+                                get = function() return MCE.db.profile.categories[C.Categories.SArena].enabled end,
+                                set = SetDashboardCategoryEnabled(C.Categories.SArena),
+                            },
+                            toggleTellMeWhen = {
+                                type = "toggle", order = 9, width = 0.9,
+                                name = "|cffffd100" .. L["TellMeWhen"] .. "|r",
+                                hidden = function() return not MCE:IsTellMeWhenAvailable() end,
+                                get = function() return MCE.db.profile.categories[C.Categories.TellMeWhen].enabled end,
+                                set = SetDashboardCategoryEnabled(C.Categories.TellMeWhen),
+                            },
+                            toggleShackled = {
+                                type = "toggle", order = 9.5, width = 0.9,
+                                name = "|cffffd100" .. L["Shackled"] .. "|r",
+                                hidden = function() return not MCE:IsShackledAvailable() end,
+                                get = function() return MCE.db.profile.categories[C.Categories.Shackled].enabled end,
+                                set = SetDashboardCategoryEnabled(C.Categories.Shackled),
+                            },
+                            partyRaidFramesRetired = {
+                                type = "description", order = 9.5, width = "full", fontSize = "small",
+                                name = "|cff777777" .. L["Party / Raid Frames"] .. " - " .. L["Retired"] .. "|r",
+                            },
+                            quickFooter = {
+                                type = "description", order = 10, fontSize = "small", width = "full",
+                                name = "\n|cff999999" .. L["LIVE_CONTROLS_DESC"] .. "|r",
+                            },
+                        },
+                    },
+                    addonIntegrations = {
+                        type = "group", name = "|cffffd100" .. L["Addon Integrations"] .. "|r",
+                        inline = true, order = 1.5,
+                        hidden = function()
+                            return not ShouldShowAddonIntegrations()
+                        end,
+                        args = {
+                            integrationsDesc = {
+                                type = "description", order = 0, fontSize = "small", width = "full",
+                                name = "|cff888888" .. L["ADDON_INTEGRATIONS_DESC"] .. "|r\n",
+                            },
+                            toggleShinyAuras = {
+                                type = "toggle", order = 1, width = "full",
+                                name = "|cffffd100" .. L["ShinyAuras"] .. "|r",
+                                hidden = function() return not MCE:IsShinyAurasAvailable() end,
+                                desc = L["Routes ShinyAuras cooldowns through the Unit Frames category. Disable this if you want ShinyAuras to keep its native countdowns untouched."],
+                                get = ShinyAurasAdapterEnabled,
+                                set = SetShinyAurasAdapterEnabled,
+                            },
+                            toggleDominos = {
+                                type = "toggle", order = 2, width = "full",
+                                name = "|cffffd100" .. L["Dominos"] .. "|r",
+                                hidden = function() return not MCE:IsDominosAvailable() end,
+                                desc = L["Routes supported Dominos action bar cooldowns through the Action Bars category. Disable this if you want Dominos to keep its native cooldown styling untouched."],
+                                get = DominosAdapterEnabled,
+                                set = SetDominosAdapterEnabled,
+                            },
+                            toggleBartender4 = {
+                                type = "toggle", order = 2.5, width = "full",
+                                name = "|cffffd100Bartender4|r",
+                                hidden = function() return not MCE:IsBartender4Available() end,
+                                desc = L["Routes supported Bartender4 action bar cooldowns through the Action Bars category. Disable this if you want Bartender4 to keep its native cooldown styling untouched."],
+                                get = Bartender4AdapterEnabled,
+                                set = SetBartender4AdapterEnabled,
+                            },
+                            toggleElvUI = {
+                                type = "toggle", order = 3, width = "full",
+                                name = "|cffffd100" .. L["ElvUI"] .. "|r",
+                                hidden = function() return not MCE:IsElvUIAvailable() end,
+                                desc = L["Routes supported ElvUI action bar, unit frame, and nameplate cooldowns through MiniCE categories. Disable this if you want ElvUI to keep its native cooldown styling untouched."],
+                                get = ElvUIAdapterEnabled,
+                                set = SetElvUIAdapterEnabled,
+                            },
+                            cooldownManagerCenteredConflictNotice = {
+                                type = "description", order = 3.5, fontSize = "small", width = "full",
+                                hidden = function()
+                                    return not HasCooldownManagerCenteredTimerConflict()
+                                end,
+                                name = function()
+                                    return "|cffff7a1a" .. (GetCooldownManagerCenteredTimerConflictMessage() or "") .. "|r"
+                                end,
+                            },
+                        },
+                    },
+                    durationTextColors = {
+                        type = "group", name = "|cffffd100" .. L["Dynamic Text Colors"] .. "|r",
+                        inline = true, order = 2,
+                        args = {
+                            dynamicDesc = {
+                                type = "description", order = 0, fontSize = "small", width = "full",
+                                name = "|cff88bbdd" .. L["DYNAMIC_COLORS_GENERAL_DESC"] .. "|r\n",
+                            },
+                            dynamicEnabled = {
+                                type = "toggle", order = 2, width = "full",
+                                name = L["Color by Remaining Time"],
+                                desc = L["Dynamically colors the countdown text based on how much time is left."],
+                                get = DurationColorsEnabled,
+                                set = function(_, val)
+                                    local config = GetDurationTextColorsConfig()
+                                    config.enabled = val
+                                    MCE:ForceUpdateAll(true)
+                                    AceConfigRegistry:NotifyChange(addonName)
+                                end,
+                            },
+                            thresholdsRowBreak = RowBreak(3.1),
+                            thresholdsHeader = {
+                                type = "header", name = L["Threshold Colors"], order = 10,
+                                hidden = DurationColorsDisabled,
+                            },
+                            thresholdsHeaderSpacing = SectionSpacer(10.05, DurationColorsDisabled),
+                            t1Value = {
+                                type = "range", order = 11, width = 1.2,
+                                name = L["Expiring Soon"],
+                                desc = L["Threshold (seconds)"], min = 1, max = 60, step = 1,
+                                get = DurationThresholdValueGet(1),
+                                set = DurationThresholdValueSet(1),
+                                hidden = DurationColorsDisabled,
+                            },
+                            t1Color = {
+                                type = "color", order = 12, width = 0.5,
+                                name = L["Color"], hasAlpha = true,
+                                get = DurationThresholdColorGet(1),
+                                set = DurationThresholdColorSet(1),
+                                hidden = DurationColorsDisabled,
+                            },
+                            t1RowBreak = RowBreak(12.1, DurationColorsDisabled),
+                            t2Value = {
+                                type = "range", order = 20, width = 1.2,
+                                name = L["Short Duration"],
+                                desc = L["Threshold (seconds)"], min = 5, max = 300, step = 1,
+                                get = DurationThresholdValueGet(2),
+                                set = DurationThresholdValueSet(2),
+                                hidden = DurationColorsDisabled,
+                            },
+                            t2Color = {
+                                type = "color", order = 21, width = 0.5,
+                                name = L["Color"], hasAlpha = true,
+                                get = DurationThresholdColorGet(2),
+                                set = DurationThresholdColorSet(2),
+                                hidden = DurationColorsDisabled,
+                            },
+                            t2RowBreak = RowBreak(21.1, DurationColorsDisabled),
+                            t3Value = {
+                                type = "range", order = 30, width = 1.2,
+                                name = L["Long Duration"],
+                                desc = L["Threshold (seconds)"], min = 60, max = 3600, step = 60,
+                                get = DurationThresholdValueGet(3),
+                                set = DurationThresholdValueSet(3),
+                                hidden = DurationColorsDisabled,
+                            },
+                            t3Color = {
+                                type = "color", order = 31, width = 0.5,
+                                name = L["Color"], hasAlpha = true,
+                                get = DurationThresholdColorGet(3),
+                                set = DurationThresholdColorSet(3),
+                                hidden = DurationColorsDisabled,
+                            },
+                            footerRowBreak = RowBreak(31.1, DurationColorsDisabled),
+                            defaultHeader = {
+                                type = "header", name = L["Advanced Threshold Settings"], order = 40,
+                                hidden = DurationColorsDisabled,
+                            },
+                            defaultHeaderSpacing = SectionSpacer(40.05, DurationColorsDisabled),                            
+                            defaultDurationColor = {
+                                type = "color", order = 41, width = 1.3,
+                                name = L["Beyond Thresholds Color"],
+                                desc = L["Color used when the remaining time exceeds all thresholds."],
+                                hasAlpha = true,
+                                get = DefaultDurationColorGet,
+                                set = DefaultDurationColorSet,
+                                hidden = DurationColorsDisabled,
+                            },
+                            dynamicOffset = {
+                                type = "range", order = 42, width = 1.4,
+                                name = L["Threshold Transition Offset"],
+                                desc = L["Moves the start of each next color band. Negative values switch slightly earlier."],
+                                min = -2, max = 2, step = 0.05,
+                                hidden = DurationColorsDisabled,
+                                get = DurationOffsetGet,
+                                set = DurationOffsetSet,
+                            },
+                            perfWarning = {
+                                type = "description", order = 99, fontSize = "small", width = "full",
+                                name = "\n|cffffaa55(!) " .. L["PERF_WARNING_DESC"] .. "|r",
+                            },
+                        },
+                    },
+                    abbrevThreshold = {
+                        type = "group", name = "|cffffd100" .. L["Abbreviate Above"] .. "|r",
+                        inline = true, order = 2.2,
+                        args = {
+                            abbrevDesc = {
+                                type = "description", order = 0, fontSize = "small", width = "full",
+                                name = "|cff88bbdd" .. L["ABBREV_THRESHOLD_DESC"] .. "|r\n",
+                            },
+                            abbrevValue = {
+                                type = "range", order = 1, width = "full",
+                                name = L["Abbreviate Above (seconds)"],
+                                desc = L["Cooldown numbers above this threshold will be abbreviated (e.g. 5m instead of 300)."],
+                                min = 0, max = 300, step = 1,
+                                get = function()
+                                    return MCE.db.profile.abbrevThreshold or C.Options.DefaultAbbrevThreshold
+                                end,
+                                set = function(_, val)
+                                    MCE.db.profile.abbrevThreshold = val
+                                    MCE:ForceUpdateAll(true)
+                                end,
+                            },
+                            tenthsValue = {
+                                type = "range", order = 2, width = "full",
+                                name = L["Show Tenths Below (seconds)"],
+                                desc = L["Cooldown numbers below this threshold will show one decimal place (e.g. 8.7). Set 0 to disable."],
+                                min = 0, max = 30, step = 0.1, isPercent = false,
+                                get = function()
+                                    return MCE.db.profile.countdownMillisecondsThreshold
+                                        or C.Options.DefaultMillisecondsThreshold
+                                end,
+                                set = function(_, val)
+                                    MCE.db.profile.countdownMillisecondsThreshold = val
+                                    MCE:ForceUpdateAll(true)
+                                end,
+                            },
+                        },
+                    },
+                    resetGroup = {
+                        type = "group", name = "|cffff4444" .. L["Danger Zone"] .. "|r",
+                        inline = true, order = 3.5,
+                        args = {
+                            dangerDesc = {
+                                type = "description", order = 0, fontSize = "small",
+                                name = "|cff666666" .. L["DANGER_ZONE_DESC"] .. "|r\n",
+                            },
+                            resetAll = {
+                                type = "execute", order = 1, width = "full",
+                                name = "|cffff6666" .. L["Factory Reset (All)"] .. "|r",
+                                desc = L["Resets the entire profile to default values and reloads the UI."],
+                                confirm = true,
+                                func = function()
+                                    MCE.db:ResetProfile()
+                                    MCE:Print(L["Profile reset. Reloading UI..."])
+                                    ReloadUI()
+                                end,
+                            },
+                        },
+                    },
+                },
+            },
+
+            -- ── Category tabs (with short per-category descriptions) ─
+            [C.Categories.Actionbar] = CreateCategoryOptions(2, L["Action Bars"], C.Categories.Actionbar,
+                L["ACTIONBAR_DESC"]),
+            [C.Categories.Nameplate] = CreateCategoryOptions(3, L["Nameplates"], C.Categories.Nameplate,
+                L["NAMEPLATE_DESC"]),
+            [C.Categories.Unitframe] = CreateCategoryOptions(4, L["Unit Frames"], C.Categories.Unitframe,
+                L["UNITFRAME_DESC"]),
+            [C.Categories.PlayerAura] = CreateCategoryOptions(5, L["Player Auras"], C.Categories.PlayerAura,
+                L["PLAYERAURA_DESC"]),
+            [C.Categories.PartyRaidRetired] = CreatePartyRaidRetiredOptions(6, L["Party / Raid Frames"]),
+            [C.Categories.CooldownManager] = CreateCategoryOptions(7, L["CooldownManager"], C.Categories.CooldownManager,
+                L["COOLDOWNMANAGER_DESC"]),
+            [C.Categories.HealerCC] = CreateCategoryOptions(8, L["HealerCC"], C.Categories.HealerCC,
+                L["HEALERCC_DESC"]),
+            [C.Categories.MiniAuras] = CreateCategoryOptions(9, L["MiniAuras"], C.Categories.MiniAuras,
+                L["MINIAURAS_DESC"]),
+            [C.Categories.MyDRs] = CreateCategoryOptions(10, L["MyDRs"], C.Categories.MyDRs,
+                L["MYDRS_DESC"]),
+            [C.Categories.SArena] = CreateCategoryOptions(11, L["sArena"], C.Categories.SArena,
+                L["SARENA_DESC"]),
+            [C.Categories.TellMeWhen] = CreateCategoryOptions(12, L["TellMeWhen"], C.Categories.TellMeWhen,
+                L["TELLMEWHEN_DESC"]),
+            [C.Categories.Shackled] = CreateCategoryOptions(14, L["Shackled"], C.Categories.Shackled,
+                L["SHACKLED_DESC"]),
+
+            help = {
+                type = "group", name = L["Help & Support"], order = 1001,
+                args = {
+                    aboutHeader = {
+                        type = "description", order = 0.1, fontSize = "large",
+                        name = C.Chat.Prefix .. "  |cff888888v" .. addonVersion .. "|r\n",
+                    },
+                    aboutDesc = {
+                        type = "description", order = 0.2, fontSize = "medium",
+                        name = "|cffbbbbbb" .. L["MCE_HELP_INTRO"] .. "|r\n",
+                    },
+                    aboutSpacing = SectionSpacer(0.21),
+                    supportGroup = {
+                        type = "group", name = "|cffffd100" .. L["Support & Feedback"] .. "|r",
+                        inline = true, order = 0.5,
+                        args = {
+                            supportDesc = {
+                                type = "description", order = 1, fontSize = "medium", width = "full",
+                                name = "|cffbbbbbb" .. L["HELP_SUPPORT_DESC"] .. "|r",
+                            },
+                        },
+                    },
+                    projectGroup = {
+                        type = "group", name = "|cffffd100" .. L["Project"] .. "|r",
+                        inline = true, order = 1,
+                        args = {
+                            projectUrl = {
+                                type = "input", order = 1, width = "full",
+                                name = "",
+                                desc = L["Copy this link to open the CurseForge project page in your browser."],
+                                get = function() return C.Urls.CurseForge end,
+                                set = function() end,
+                            },
+                            developerUrl = {
+                                type = "input", order = 2, width = "full",
+                                name = "",
+                                desc = L["Copy this link to view other projects from Anahkas on CurseForge."],
+                                get = function() return C.Urls.Developer end,
+                                set = function() end,
+                            },
+                        },
+                    },
+                    addonsGroup = {
+                        type = "group", name = "|cffffd100" .. L["Useful Addons"] .. "|r",
+                        inline = true, order = 2,
+                        args = {
+                            addonsDesc = {
+                                type = "description", order = 0, fontSize = "small", width = "full",
+                                name = "|cff88bbdd" .. L["HELP_COMPANION_DESC"] .. "|r\n",
+                            },
+                            miniAurasDesc = {
+                                type = "description", order = 1, fontSize = "small", width = "full",
+                                name = "|cff33ff99MiniAuras|r\n|cffbbbbbb" .. L["HELP_MINIAURAS_DESC"] .. "|r",
+                            },
+                            miniAurasUrl = {
+                                type = "input", order = 2, width = "full",
+                                name = "",
+                                desc = L["Copy this link to open the MiniAuras CurseForge page in your browser."],
+                                get = function() return C.Urls.MiniAuras end,
+                                set = function() end,
+                            },
+                            miniAurasSpacer = SectionSpacer(2.1),
+                            pvpTabDesc = {
+                                type = "description", order = 3, fontSize = "small", width = "full",
+                                name = "|cff33ff99Smart PvP Tab Targeting|r\n|cffbbbbbb" .. L["HELP_PVPTAB_DESC"] .. "|r",
+                            },
+                            pvpTabUrl = {
+                                type = "input", order = 4, width = "full",
+                                name = "",
+                                desc = L["Copy this link to open Smart PvP Tab Targeting on CurseForge."],
+                                get = function() return C.Urls.SmartPvPTabTargeting end,
+                                set = function() end,
+                            },
+                            pvpTabSpacer = SectionSpacer(4.1),
+                            arenaDRDesc = {
+                                type = "description", order = 5, fontSize = "small", width = "full",
+                                name = "|cff33ff99ArenaDR Nameplates|r\n|cffbbbbbb" .. L["HELP_ARENADR_DESC"] .. "|r",
+                            },
+                            arenaDRUrl = {
+                                type = "input", order = 6, width = "full",
+                                name = "",
+                                desc = L["Copy this link to open ArenaDR Nameplates on CurseForge."],
+                                get = function() return C.Urls.ArenaDRNameplates end,
+                                set = function() end,
+                            },
+                        },
+                    },
+                },
+            },
+
+            -- ── Profiles (penultimate; Help & Support stays last) ───────
+            profiles = profileOpts,
+        },
+    }
+end

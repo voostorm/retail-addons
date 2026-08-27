@@ -1,0 +1,40 @@
+## Interface: 120100
+## Title: ArenaDR Nameplates
+## Notes: Arena DR tracker for nameplates with timers and test mode (Midnight 12.1)
+## Author: Anahkas
+## Version: 1.7.6
+## Category: PvP
+## SavedVariables: ArenaDRNameplatesDB
+## IconTexture: Interface\Icons\Ability_Rogue_KidneyShot
+## X-Category: PvP
+## X-Embeds: LibSharedMedia-3.0
+## X-Website: https://www.curseforge.com/wow/addons/arena-dr-nameplates
+
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
+Performance.lua
+Adapters\Registry.lua
+Adapters\Plater.lua
+Adapters\Platynator.lua
+Adapters\ThreatPlates.lua
+Adapters\ElvUI.lua
+Adapters\EllesmereUI.lua
+Adapters\BetterBlizzPlates.lua
+Adapters\Blizzard.lua
+ArenaNameplateHelper.lua
+Shared.lua
+Locales\enUS.lua
+Locales\deDE.lua
+Locales\frFR.lua
+Locales\esES.lua
+Locales\ruRU.lua
+Locales\ptBR.lua
+Locales\koKR.lua
+Locales\zhCN.lua
+Locales\zhTW.lua
+Core.lua
+SelfDR.lua
+TargetFocusDR.lua
+UI\StandaloneOptions.lua
+Settings.lua

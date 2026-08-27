@@ -1,0 +1,944 @@
+# sArena Reloaded 2.6.1g
+## Tweak
+- Midnight: Fix an issue with DR frames sticking around between shuffle rounds and not resetting until round started.
+
+# sArena Reloaded 2.6.1f
+## Bugfix
+- Midnight: Fix DR frames getting hidden on UI hide and not coming back afterwards.
+
+# sArena Reloaded 2.6.1e
+## Tweak
+- Update Dissonance profile (www.twitch.tv/dissonancewow). Thank you for sharing!
+
+# sArena Reloaded 2.6.1d
+## Tweak
+- Update Jazggz profile (www.twitch.tv/jazggz). Thank you for sharing!
+## Bugfix
+- Fix an issue with class color frames in the new NPC Training Grounds Arena.
+
+# sArena Reloaded 2.6.1c
+## New
+- Add new Ceit profile (www.twitch.tv/ceitxd). Thank you for sharing!
+- Add new Rahbekius profile (www.twitch.tv/rahbekius). Thank you for sharing!
+## Bugfix
+- Fix an issue with the border on Class Icon for some layouts disappearing sometimes.
+
+# sArena Reloaded 2.6.1b
+## New
+- Add EllesmereUI party frames anchor support for Widgets.
+
+# sArena Reloaded 2.6.1
+## New
+- New profile: Kaaaz (www.twitch.tv/KaaazTTV). Raidframe style. Thank you for sharing!
+- Midnight: Add disarms as CC auras for Midnight. Again ty to Verz for providing the list without me even asking <3
+- Midnight: Add a few debuff auras to track (Like Hypo and Forb).
+## Bugfix
+- Midnight: Fix crop on icons for the new 12.1 auras.
+- Fix Class Icon aura highlight glow being too small on BlizzRaid layout.
+
+# sArena Reloaded 2.6.0e
+## Bugfix
+- Fix Class Icon CD Font Size setting not applying to the cooldown text on the new Midnight 12.1 auras.
+
+# sArena Reloaded 2.6.0d
+## Bugfix
+- Fix a nil class check causing error on the new class color api
+
+# sArena Reloaded 2.6.0c
+## Bugfix
+- Fix a secret error
+- Fix a nil error for class color frame texture after changes to class colors.
+
+# sArena Reloaded 2.6.0b
+## Tweak
+- Add mention of racial texture being gone on Midnight 12.1 in that section.
+- Support for new Training Grounds NPC arenas.
+- Update Dissonance profile (www.twitch.tv/dissonancewow)
+## Bugfix
+- Fix Class Icon Auras not showing decimals on new Midnight 12.1 auras.
+- Fix secret error.
+- Fix Class Icon aura highlight glow not scaling with the class icon in layouts that can scale it (BlizzCompact, BlizzRaid, Pixelated).
+- Fix Class/Aura Icon showing a red question mark in the new npc arena if class icon was disabled
+
+# sArena Reloaded 2.6.0
+## New
+- Midnight: Updated for 12.1. Notable change: Racial Texture is gone because races are now secret. However race text is now available instead as mentioned below.
+- New Race text next to spec text setting (Layout -> Arena Frames: Options). (I'll tweak this and add some more options in the future)
+- TBC: Show arena frames in spawn like on other clients but without any info just a dark mystery player frame.
+## Tweak
+- Tweak the castbar spark size on Classic versions, was too big.
+## Bugfix
+- Fix uninterruptible casts showing normal cast/channel color with certain specific settings.
+- Fix shadowsight timer starting in BGs
+## Notes
+- I want to thank Verz and Muleyo for helping me understand some of the new 12.1 API with examples and stuff. Thank you<3
+- I am aware of a bug on the classic versions where if someone on the enemy team is casting as the gates open the castbar gets stuck visible at all times. I have no idea why this happens atm and I dont have any classic characters to test with and I cannot replicate it on PTR either. If you are able to test this and get some info my way please contact me on discord.
+
+# sArena Reloaded 2.5.9
+## New
+- "Blizz Compact" layout can now have its Class Icon moved and resized. (Other layouts require too much work to refactor due to how sArena was originally made. I dont have time for it atm)
+## Tweak
+- Add a missing Kick spell id to interrupt list for TBC.
+
+# sArena Reloaded 2.5.8e
+## Tweak
+- Fix castbar flash at the end of cast on TBC/MoP after new Blizzard patches.
+
+# sArena Reloaded 2.5.8d
+## Bugfix
+- Fix Hunter's Feign Death perma hiding widgets on Midnight.
+
+# sArena Reloaded 2.5.8c
+## Bugfix
+- Fix TBC trinket cooldown.
+
+# sArena Reloaded 2.5.8b
+## Tweak
+- Fix Human racial for TBC (Perception, not Will to Survive).
+- Improve racial tooltips with spell info
+- Remove MoP races from being shown in TBC settings.
+
+# sArena Reloaded 2.5.8
+## New
+- New settings for Widget: Combat Indicator. "Show in Combat" and "Use Sap and Square Icons". (Layout -> Widgets -> Combat Indicator)
+- New "Clickthrough Frames" setting in Global->Click Actions that makes the arena frames clickthrough in Arena.
+- New "Improve Text Rendering" setting in Layout->Text Settings that enables SLUG font rendering and will make text be less jagged and smoother in general.
+## Bugfix
+- Fix Trinket Cooldown on TBC after new WoW patch.
+
+# sArena Reloaded 2.5.7c
+## New
+- New "Only show CC Auras" setting (in Global -> Class Icon)
+## Tweak
+- Revert back to old method to hook Blizzard DR frames (opening Edit Mode) due to a few people reporting issues. The new method is still available as a setting in Global -> Diminishing Returns at the very bottom in the new "Debug" block. Please enable this if you want to help and report any issues. Thank you!
+
+# sArena Reloaded 2.5.7b
+## Tweak
+- Update Dissonance profile (www.twitch.tv/dissonancewow)
+
+# sArena Reloaded 2.5.7
+## New
+- Add an option to include Shadow Word: Death in the interrupt list for the interrupt castbar color setting (Layout -> Castbar). Only applied to healers, not Shadow.
+## Tweak
+- Remove wyvern sting dot spell id from aura list (as opposed to the actual cc) from TBC version.
+- Rework Midnight hook into DR frames so it no longer requires to open Edit Mode on login/reload. This will both avoid running into a Blizzard bug that causes the breath bar (swimming) to disappear after opening edit mode and also reduce taint risk in general. If you have addons that introduce taint however you are of course still at risk but less so (if you dont open edit mode manually anyway).
+- Remove white castbar flash at end of cast.
+
+# sArena Reloaded 2.5.6i
+## New
+- New JFarm profile (www.twitch.tv/jfarm_). Thank you for sharing.
+## Tweak
+- Only show first time sArena welcome screen when entering settings instead of automatically when first loading the addon on login.
+## Bugfix
+- Fix font drop shadow not showing on Health, Power and SpecName Text.
+
+# sArena Reloaded 2.5.6h
+## Tweak
+- Update TOC version number.
+
+# sArena Reloaded 2.5.6g
+## Tweak
+- WoW 12.0.7 comes with more bugs. Important aura filter is broken because of Blizzard and shows a bunch of trash auras. Temporarily disabled important auras until Blizzard fixes it.
+
+# sArena Reloaded 2.5.6f
+## Bugfix
+- Fix Hunter's Feign Death causing the Death Icon to be stuck visible for the rest of the game after the tweak in 2.5.6e and an oversight.
+
+# sArena Reloaded 2.5.6e
+## Tweak
+- Tweak Death Icon and death handling a little bit. Should now more consistently "stay dead" even though the arena unit releases/leaves arena.
+## Bugfix
+- TBC: Fix stale spec info between arena games resulting in wrong spec icons/text.
+- Fix stealth health ticker feature filling the hp bars of dead units if they left/released in arena.
+
+# sArena Reloaded 2.5.6d
+## Bugfix
+- TBC: Fix typo causing a nil error and frames not to work for TBC.
+
+# sArena Reloaded 2.5.6c
+## Bugfix
+- MoP: Yet another trinket cd tweak handling.
+
+# sArena Reloaded 2.5.6b
+## Bugfix
+- MoP: Yet another trinket cd tweak handling.
+
+# sArena Reloaded 2.5.6
+## Tweak
+- Updates for MoP 5.5.4 and its broken patch with broken API. Huge thanks to Nukkz, Somatics, Rat and Vezir for helping me getting info and testing the beta versions.
+- Update some data for MoP about DR's and Racial Shared CD's.
+## Bugfix
+- MoP: Fix castbar highlight effect being stuck and not working properly.
+- MoP: Fix interrupted castbars never hiding unless a new castbar update came in.
+- MoP: Fix Trinket CD not showing for anyone but Humans.
+- MoP: Fix Arena Frames sometimes not being visible before gates opened or having stale info.
+
+# sArena Reloaded 2.5.5b
+## Tweak
+- Update MoP toc version number.
+
+# sArena Reloaded 2.5.5
+## Tweak
+- Update MoP version to support new WoW patch 5.5.4
+- Add missing "Blizz Raid" layout to MoP and Wrath (oops).
+- Add support for cast target & cast highlights for MoP (now that 5.5.4 implemented the API)
+
+# sArena Reloaded 2.5.4g
+## Bugfix
+- Fix issue with Grid2 (and potentially others) and Widgets not anchoring correctly to the PartyFrames without a reload/setting toggle.
+
+# sArena Reloaded 2.5.4f
+## Tweak
+- Update Dissonance profile (www.twitch.tv/dissonancewow)
+## Bugfix
+- Fix issue with Danders Frames and Widgets not anchoring correctly to the PartyFrames without a reload/setting toggle.
+
+# sArena Reloaded 2.5.4e
+## New
+- Add a new "Always On" option for Party Member Target Text Widget so it works outside of Arena as well.
+## Bugfix
+- Fix lua error on test mode exit if Arena Target Indicators were not enabled
+- Fix Arena Target Text Widget forgetting set font size on reload.
+- Fix icon border for Dispel Icon showing on Midnight where dispels should be deactivated due to restrictions.
+
+# sArena Reloaded 2.5.4d
+## New
+- Add Simplified and Traditional Chinese localization by vitocichen @ GitHub. Thank you for your contribution!
+
+# sArena Reloaded 2.5.4c
+## Bugfix
+- Fix "Format Numbers" being turned off accidentally. You may need to double check this value in settings (Global -> Arena Frames: Status Text)
+- Fix secret error related to castbar casts on Midnight resulting in various issues like castbar color/highlights/etc being off.
+
+# sArena Reloaded 2.5.4
+## New
+- Pet Frames. You can now enable Pet Frames for pet classes
+- Midnight: Castbar Highlight has its own group now in the Castbar layout settings with a new color setting, icon glow setting, and a "Highlight CC" option. Note that you can only chose either "Cast on me" or "CC" due to restrictions.
+## Tweak
+- Midnight version has the un-interruptible texture setting working again, but needs a better solution still as this isnt perfect but better than nothing.
+- Castbar quick hiding should properly work again for channeled casts again (without hiding it when its been interrupted).
+- Update default spell used for range check for survival hunter to hatchet toss (40yard).
+## Bugfix
+- Fix first time introduction screen reverting layout choice to default Gladiuish layout even after picking a different one.
+- Fix an issue of castbar not changing color on gained aura mastery effects like Precog etc.
+- Fix click issues in test mode preventing click and drag for widgets etc for things going over the arena frames.
+- Fix ctrl+shift drag for Arena/Party Target Text.
+- Fix font issue on the Party Target Text not picking up selected font.
+- Fix an issue causing aura highlight glows to appear after a shuffle round if unit was stealthed when gates opened.
+- Fix an error related to spec updates while in combat on TBC
+- 2.5.4b: Fix secret error in castbar highlight code
+## Note
+- Big patch with a lot of changes to things behind the scenes to accomodate Pet Frames. Please if you run into any issues report it (especially TBC cuz very limited testing has been done there).
+
+# sArena Reloaded 2.5.3
+## New
+- New aura sorting settings (Global - Class Icon) and updated the default aura sorting method for sArena to show last aura added by default (same as MiniCC by Verz).
+- New Vanguards profile (www.twitch.tv/VanguardsTV). Thank you for sharing!
+- New "Use Default Party Frames (for Widgets)" setting that forces default party frames over detected party frames addon for Widgets placements (like Arena Target Indicator)
+## Tweak
+- Re-organize gui categories a bit and make them alphabetical (for the most part).
+
+# sArena Reloaded 2.5.2b
+## Tweak
+- Update Dissonance profile (www.twitch.tv/dissonancewow)
+- Midnight: Tweak how the "Hide DRs" setting works so other DR addons relying on the Blizzard DR frames should still function correctly.
+
+# sArena Reloaded 2.5.2
+## New
+- New intro screen for first time sArena Reloaded users where you can preview and pick a layout/profile.
+- All profiles in "Streamer Profiles" section can now be previewed by mousing over the buttons.
+## Tweak
+- Fix "Force Castbar Text Width" setting to account for text size setting so it doesnt truncate for no reason or go outside.
+- Interrupt logic: Replace IsSpellKnown with IsPlayerSpell because IsSpellKnown returns false on known spells on some clients. #Blizzard
+## Bugfix
+- Fix issues with Arena/Party Target Indicators not showing up on other types of non-default party frames (Danders, ElvUI, etc). Also consider if ElvUI doesnt disable default party frames and use default party frames instead.
+
+# sArena Reloaded 2.5.1
+## New
+- Midnight: Absorbs and Overshields are back! (And again huge thanks to Verz (MiniCC, FrameSort, etc) for being the goat and helping me a bit here)
+## Bugfix
+- Fix potential nil error on login.
+
+# sArena Reloaded 2.5.0
+## New
+- Trinket Glow: Adds a glow animation around the Trinket icon when it gets used. Settings in Global -> Trinket,
+## Tweak
+- Tweak lingo about Glad Tracker requirement being 2400 when its supposed to be 2300.
+
+# sArena Reloaded 2.4.9b
+## New
+- Midnight: Glad Tracker (same as in BetterBlizzFrames). This will add tracking of your Arena/Shuffle/BG elite achievements to your honor panel and display number of wins and required for the achievement. One win above elite rating is required for it to display. It is enabled by default but can be turned off at the very bottom of Global -> Arena Frames -> Misc.
+## Bugfix
+- Fix new Cooldown Swipe Color setting on Classic versions of WoW causing a lua error due to the function accidentally being left out on Classic versions.
+- Fix potential errors caused from old custom code tweaking sArena's aura priority.
+
+# sArena Reloaded 2.4.9
+## New
+- Midnight: Added back DR leeway adjustments (due to Blizzard bug). Tldr is Blizzards DR frames can sometimes be inaccurate by around 0.3sec. This lets you set a safer value than the original intended 16 seconds. By default its set to 16.1 but 16.3 might be safer. (Global -> Diminishing Returns)
+## Tweak
+- Tweak frame strata & levels of stuff.
+- Make sure statusbar text is hidden between shuffle rounds on all frames.
+## Bugfix
+- Fix Aura Highlights potentially getting stuck on between shuffle rounds in spawn room if class icon was set to hidden.
+
+# sArena Reloaded 2.4.8
+### New
+- Cooldown Swipe Color setting (Global -> Cooldown Swipe Color)
+### Tweak
+- Support for ShadowedUnitFrames partyframes for Party/Arena Targets by void-ow@GitHub. Thank you!
+- Update Dissonance profle (www.twitch.tv/dissonancewow)
+- Tweak Spec Icon Button and Widgets FrameStrata & Levels (to avoid it showing on top of talent frame for example)
+- Midnight: Tweak handling of Party/Arena Targets so icons properly stack in one direction (no gaps or starting in wrong end)
+
+# sArena Reloaded 2.4.7c
+## Tweak
+- Added Arena Target Indicator support for ElvUI, Cell, Grid2, DandersFrames, VuhDo and default Blizzard non-raidstyle PartyFrames. If theres an addon you miss let me know.
+- Aura logic reworked a little bit so Aura Highlights can now work alone on its own if Class Icon is hidden or Auras on Class Icon is disabled.
+- Aura Highlight around Class Icon disabled while "Hide Class Icon" is enabled.
+
+# sArena Reloaded 2.4.7b
+## Tweak
+- Add back Masque support for Frame & Castbar (the bar itself) as a subsetting in Global -> Misc at the bottom (off by default).
+- Fix test mode title text being anchored to the wrong frame when growth direction of arena frames was set to up.
+
+# sArena Reloaded 2.4.7
+## New
+- Aura Highlight: Shows a glow/pixel highlight on arena frames during CC/Defensives/Important auras. (Global -> Aura Highlights). Classics: For classics this offers much more customizeability but I want to keep it similar to Midnight so whats expected from it is the same. If you have feedback on the spells on TBC/Wrath/MoP please let me hear it!
+- Healer Indicator: New Widget that just shows a cross on the healer frame (Layout -> Widgets -> Healer Indicator)
+- New "Arena/Party Target Text" setting in Widgets section. Show target name of arena/party unit.
+- Midnight: Workaround setting for Blizzard DR Bug (Global -> Diminishing Returns). This setting will to a crude workaround so you wont get fooled by a bug related to Mass Invis and DR frames not updating properly because of it. Thank Blizzard for this, I wish I could fix it properly. This is now enabled by default but can be turned off or tweaked more.
+- Added "Minimalist" texture as option due to demand.
+## Tweak
+- Midnight: New workaround for Party/Arena Target Indicators (the icons from before, not the new target text).
+- Remove Masque categories for "Castbar" (not the Icon, but the bar itself) and "Frame". I don't think these are needed or wanted but if you were using them let me know.
+## Bugfix
+- Fix mistake in Masque support code after earlier refactor causing a lua error now.
+- Fix Masque support showing Masque border on Dispel Icons in Midnight (which shouldve been hidden since dispels are not supported on Midnight)
+
+# sArena Reloaded 2.4.6
+## New
+- Hide Class Icon setting. Hide it entirely, no class or aura.
+## Tweak
+- Split all the global Class Icon settings into its own section so it's easier to navigate.
+- Raise frame level of Widget: Target/Focus border so it shows above MiniCC icons.
+- Fix Shadowsight timer for Midnight. (Wont accurately detect pickup, only spawn time then auto hide after 35 sec. Not active in Solo Shuffle)
+
+# sArena Reloaded 2.4.5
+## New
+- New Range Check settings in Global. You can now enable icons/colors/transparency settings for range and set a specific range depending on the spell you pick. (Global -> Range Check)
+- Castbar background can now also be changed texture and set color for (Layout -> Castbar)
+- Stealth Alpha slider (Global -> Arena Frames)
+- New disconnected icon on healthbar similar to death icon when disconnected.
+## Tweak
+- Midnight: Make sure Racial Shared CD does not reset an already active Racial CD when Trinket gets used 2nd.
+- Midnight: Mention Blizzards new API restriction bricking the current Party/Arena Targets feature in its section (and that a new similar feature is inc).
+- Midnight: Add missing Warlock Pet Spell Lock ID to interrupt list so castbars color properly.
+- Tweak healthbar size for Blizz Retail layout when hiding powerbars to not leave a small gap on the bottom left side.
+- Add a dark background texture for "Hide Class Icon (Show Auras Only)" setting on layouts that have a circle border around class icon to make it look less strange with it being see through.
+## Bugfix
+- Fix test mode running into an error on Classic clients due to some Midnight-only code accidentally being run.
+
+# sArena Reloaded 2.4.4c
+## Tweak
+- Midnight: Now if racials with shared trinket cd are used first they will first display the shared cooldown then afterwards update with the remaining full cooldown. (API limitation workaround to show racial CD)
+## Bugfix
+- Fix sArena Frames showing up in battlegrounds. I might add a new setting to enable this as a setting if that is of interest (for bg objectives only, flags, orbs, etc) lmk.
+
+# sArena Reloaded 2.4.4b
+## New
+- Clique support. If you have Clique theres a new checkbox in the Click Actions tab to let Clique handle all click actions instead.
+## Tweak
+- Midnight: Decimals are now working again for Midnight. Temporary solution until new proper API in 12.0.5 comes.
+- Midnight: Improve the Instant DR Cooldown a little bit by making it consider DR severity and do a lower time if already on DR.
+## Bugfix
+- Midnight: Fix issue with DR frames disappearing if DR got refreshed just as the first DR was ending. (This is not the Blizzard bug with Mass Invisibility, that one I cannot fix its on Blizzard)
+
+# sArena Reloaded 2.4.4
+## New
+- Click Actions (Global). You can now add new and customize existing Click Actions like Left Click to Target and Right Click to Focus. For example Shift+RightClick to use a macro.
+- Midnight only: New castbar setting "Highlight Casts on Me" that puts a bright border around the castbar if the spell is being casted on you. (Layout -> Cast Bar)
+## Tweak
+- Fix Castbar TargetText/ID not getting proper font sometimes.
+- Castbar color tweaks to be more consistent.
+- Midnight: Fix castbar interrupt detection so now castbars will immediately hide again when a cast is over except for when they get interrupted and it will say who interrupted it and fade out slowly.
+## Bugfix
+- Midnight: Fix percent display on manabars being stuck at 0-1 instead of 0-100.
+- Midnight: Fix DR Black Border setting being white.
+
+# sArena Reloaded 2.4.3b
+## New
+- Color Trinket: Keep Original Texture; Instead of replacing the texture entirely with a solid color keep the original texture but tinted in a color.
+## Bugfix
+- Midnight: Fix Color Trinket setting not working due to a last minute change and mistake in the logic for it.
+
+# sArena Reloaded 2.4.3
+## New
+- Show Target Text on Castbar setting (Layout -> Castbars). On Midnight this shows True Target with new API, on older classic versions this will just show the units target and not neccesarily where the spell is going due to macros etc so I would only use this on Midnight tbh but the option is there anyway.
+- Trinket used sound effect (Global -> Trinkets). Can be customized for healer/dps.
+- Hide Manabar and Hide Manabar: Keep healer mana shown settings. (Layout -> Arena Frames)
+- Added DR setting for "Only show DR's I can trigger" (Global -> DR)
+- Hide castbars setting (Layout -> Castbars).
+- Midnight: Added setting to hide DR's (Global -> DR). (On classics you can do this by unchecking DR categories)
+- Added "Enable/Disable all" buttons for Racials (Global -> Racials). Also noted down on Midnight that racial cd's cannot be tracked anymore, only shared CD with trinket can be tracked (if trinket is used first).
+- Allow negative spacing value on frame spacing setting for some layouts having a little gap even with 0 set as spacing.
+- Force Castbar Text Width setting, on by default now and makes it so castbar text doesnt overflow the width of the castbar. (Layout -> Text Settings)
+## Tweak
+- On stealth player healthbar no longer jump up to 100% but instead remain at what they were when they stealthed.
+## Bugfix
+- Fix issues with Trinket etc not working properly due to ElvUI's setting to disable default arena frames. Will be fixed automatically but require a reload.
+- Fix some problems with the frames not being fully visible in spawn room all the time.
+- Fix some issues with trinket cooldown going off despite enemy not having trinket
+- Fix some issues with racial cooldown (when triggered by shared CD) kept triggering multiple times.
+- Fix some misconfiguration issues behind the scenes. This is a lot of small changes everywhere in the addon so potential for a little mishap if there's something I've missed.
+
+2.4.2d
+- Tweaks to interrupt tracking and coloring.
+- Tweaks to Midnight Trinket/Racial icons.
+- Set frames fully visible between arena shuffle rounds on Midnight.
+
+2.4.2c
+- Add new Dissonance profile (www.twitch.tv/dissonancewow). Thank you for sharing.
+- Tweak interrupt tracker logic to be more consistent. Midnight only: Include priests Silence as an "interrupt" for interrupt color.
+- Tweak default position of Party Target Indicators on BlizzRaid layout.
+- Clean up cooldown text settings a bit. Shouldnt make a difference to anything ingame.
+
+2.4.2b
+- Midnight: New setting in Global -> DR to Disable Instant DR Cooldown. (DR cooldown spiral wont show until cc ends/breaks)
+- Midnight: Fix pixel border DR colors sometimes not applying.
+
+2.4.2
+- Fix lua error in pixel border DR coloring logic.
+- Add version number to title top of /sarena
+
+2.4.1e
+- Midnight: Minor tweak to DR's due to reports of funky business that I could not replicate.
+
+2.4.1d
+- Midnight: Minor tweak to fix a DR issue.
+
+2.4.1c
+- Fix Color Trinket setting putting available color on people without a found trinket on MoP. And this color still being hardcoded green instead of respecting new settings.
+
+2.4.1b
+- Add new color settings for Color Trinket instead of just green/red.
+- Fix Color Trinket on TBC/MoP not going green again when trinket is up.
+- Midnight: Fix stuff for new Midnight changes.
+
+2.4.1
+- Add Jazggz profile (www.twitch.tv/jazggz). Thank you for sharing <3
+- The "Party Target Indicators" Widget now also has options to show who Enemy Arena Units are targeting on your PartyFrame. Also fixed for 5v5.
+- Midnight: DR Frames now show the DR cooldown immediately (and updates proper time later, similar to how Diminish used to work)
+- Midnight: Fix an issue potentially causing a DR frame to disappear until DR reset.
+- Midnight: Add new Reload UI warning if your Edit Mode settings did not have "Arena Frames" checked; This needs to be enabled and sArena will automatically enable it if it isnt and request a reload to avoid issues.
+- Midnight: Fix potential error caused by Blizzard Edit Mode and some rare times data returning slow.
+- Tweak "Show Arena Number" setting to show "Arena 1" instead of "arena1". Also add a sub-setting "ID Only" to only show the number itself.
+- Added FrameSort support for "Show Arena Number" settings.
+- Update and fix Saul & Snupy profile import string. Apologies :x
+
+2.4.0b
+- Fix typo causing a lua error related to the colored DR CD Text setting.
+
+2.4.0
+- You can adjust DR spacing again on Midnight.
+- Refactor Midnight DR Frames handling towards a more permanent solution. (Still wish Blizzard improved on this)
+  They are now custom frames again and can be adjusted the spacing of properly how they used to.
+  The icons are still unfortunately super secret stuff and impossible to do anything with.
+- Fix some trinket texture issues on Midnight.
+- Tweak BlizzRaid default profile to use the new Target Highlight Border by default instead of icon. Slighlty tweak posiiton of some stuff too.
+
+2.3.9g
+- Fix Combat Indicator not properly hiding when it should due to a mistake in event registering
+- Update Mes profile (www.twitch.tv/notmes). Thank you for sharing.
+
+2.3.9f
+- Fix millisecond timer setting for upcoming 12.0.5 patch using new API
+- Minor tweaks and fixes.
+
+2.3.9e
+- Tweak and fix some minor issues related to the new Evoker Castbars.
+
+2.3.9d
+- Fix Evoker castbars to look normal again after more changes from Blizzard.
+- Add FrameSort support for Test Mode display so it sorts the preview according to your FrameSort settings.
+
+2.3.9c
+- Add Saul profile (www.twitch.tv/saul). Thank you for sharing.
+- Remove Trimaz profile upon request after a change of hearts.
+
+2.3.9b
+- Midnight: Hide stack number on Class Icon
+- Misc tweaks
+
+2.3.9
+- Midnight: Fix Trinket after more Blizzard changes.
+- Midnight: New setting "Prio Important over Defensives" (Global -> Arena Frames -> Misc). This prios important buffs over defensive buffs. This is how I used to have it but due to Blizzard having full control over what a "Important Buff" is now I opted for defensives first by default. I might change this later with more info but heres at least a setting that lets you change it and determine it for yourself.
+
+2.3.8b
+- Add Snupy (www.twitch.tv/snupy) profile. Ty for sharing.
+- Add Mysticall (www.twitch.tv/mysticallx) profile. Ty for sharing.
+- Update profiles.
+
+2.3.8
+- Add new setting: Castbar ID. Show arena ID number text on castbar to quickly identify whos castbar it is. Settings in Castbar section and can move text in "Text Settings" as well.
+- Add new settings: Disable Class/Trinket/Racial/DR cooldown text. (Global->Arena Frames)
+- Fixup auras for Midnight with help from Verz.
+- Fix layering issues with Pixel Border
+- Fix pixel border still showing around castbar icon spot when hiding castbar icon.
+
+2.3.7c
+- Fix layering issue with PixelBorder + TargetFocusBorder caused by last patch.
+
+2.3.7b
+- Fix click drag on arena frames, lua error check preventing it from being moved.
+- Add Venruki profile (www.twitch.tv/venruki). Thank you for sharing.
+- Add Trimaz profile (www.twitch.tv/trimaz_wow). Thank you for sharing.
+- Tweak SpecIcon's layer so it shows above Target/Focus Border.
+
+2.3.7
+- Fix issues with DR Frames when growth direction was set to RIGHT. A popup notification will appear if you had this setup and ask for you to double check positions in test mode now.
+- Pixelated layout now uses Target Border by default instead of Target Icon and has had its border size and offset tweaked slighly.
+- Fix "Wrap Trinket" setting for Target/Focus Border not working correctly on Pixelated layout
+- Fix CastBar Drag for Midnight
+- Misc cleanup in addon.
+
+2.3.6b
+- Fix new secret error on new WoW patch.
+
+2.3.6
+- New Target/Focus Border settings, similar to Gladius. In Layout Settings -> Widget section under Target/Focus Indicator.
+- New Pinkteddyp profile (www.twitch.tv/pinkteddyp). Thank you for sharing.
+- New SkillCapped profile.
+
+2.3.5d
+- Fix a nil error within disable dr border logic for test frames.
+
+2.3.5c
+- Fix some castbar color issues like custom colors.
+
+2.3.5b
+- Prepatch/Midnight: Disable forced reload now that the DR frames have been fixed by Blizzard.
+
+2.3.5
+- Add new name & spec name coloring options. Class Color SpecName and Custom Color for both.
+- Add Aswog profile (www.twitch.tv/aswog). Ty for sharing.
+- Add Bualock profile (www.twitch.tv/bualock). Ty for sharing.
+
+2.3.4d
+- Added "Hide Spec Icon" setting. So you can keep Class Icon but hide the spec.
+- Fixed Color Trinket setting on Midnight.
+
+2.3.4c
+- Fix castbar colors after Midnight restrictions. Should work fine now with uninterruptible. Please report any issues.
+- You can now right-click addon name title in test mode to toggle it off/on.
+- Removed Midnight info tab and replaced it with the Streamer Profiles part of Share Profile and renamed Share Profile to Import/Export.
+- Add some info on the DR Frame situation in the DR section to avoid some confusion.
+- The frames bugging out seem to be related to the game taking a dump; arena1-3 macros does not work either when this happens. Hard to test and I assume its just Blizzard being Blizzard.
+
+2.3.4b
+- Fix DR Text always being active regardless of settings.
+- Fix lua errors from now new restrictions from Blizzard related to castbar types (uninterruptible status).
+    This means currently not possible to color/texture an uninterruptible cast without some sort of wonky workaround maybe.
+    Disabled for now and will just color depending on cast/channel, this may be confusing on uninterruptible casts.
+    Consider Modern Castbars setting which uses default colored textures for now until a fix may arrive.
+
+2.3.4
+- Update Mes profile
+
+2.3.3e
+- Add test global to skip DR Warning/Reload for testing. Macro: /run sArenaSkipDrWarning = true
+- Fix Prepatch/Midnight trying to use functions from Dispel Module (which is disabled on Prepatch/Midnight) causing error and test mode to bug.
+- Locale fixes and tweaks from 007bb. Thank you!
+
+2.3.3d
+- Add Interface Version 120000 to toc file, wouldnt load on prepatch with just 120001.
+
+2.3.3c
+- Fix interrupt checker for Midnight
+- Restructure and cleanup a few things behind the scenes.
+
+2.3.3b
+- Midnight: Fix party target feature due to new Beta changes.
+- Midnight: Headsup: Currently if you reload UI in an arena that has started (gates opened) the Blizzard UI shits the bed, which also causes sArena to shit the bed. Blizzard needs to fix this.
+
+2.3.3
+- TBC: Warrior stances now show up as auras on sArena like normal (workaround required for TBC since they not *real* auras)
+- Localization added. Currently supports English and Korean. Thank you to 007bb for contributing.
+
+2.3.2b
+- Remove shared CD from Will of the Forsaken in TBC
+- Remove Thorns from aura list in TBC
+
+2.3.2
+- TBC aura list cleanup and added a few things.
+
+2.3.1e
+- Fix alpha issue on stealth units.
+
+2.3.1d
+- Fix interrupts on channel spells not showing due to workaround for non-working Blizzard API being set up slightly wrong in some refactoring.
+
+2.3.1c
+- Add temporary icon for missing trinket texture (will get the retail texture eventualy)
+
+2.3.1b
+- Fixup TBC stuff.
+- Add a guard for potential DR error, will print error msg, please report back.
+
+2.3.1
+- Add Wrath support
+
+2.3.0
+- New Shadowsight Timer setting (Global). Enabled by default on TBC, off on others.
+- New "Color DR Cooldown Text by Severity" setting (Global -> DR) (Does not work with OmniCC).
+- Lots of tweaks to fix minor things. Class Icon texture appearing above borders (after rework) for example.
+- Midnight: Fix a couple of DR related things.
+- Midnight: Fix test DR frames to show the correct new Midnight icons (these are still not possible to change, and honestly probably wont be cuz Blizzard)
+
+2.2.9b
+- Fix "blocked action" error due to a whoops.
+- Rework Class Icon stuff behind the scenes, fixes some minor issues too.
+- Fix Spec Text disappearing on unit death and not showing again on shuffle round change because I forgot about shuffle for the millionth time.
+- Fix TBC clickable frames in arena.
+
+2.2.9
+- Add health/mana background texture & color settings.
+- Fix Pixelated layout's ClassIconCooldown not showing.
+- Fix DR BorderFrame's FrameLevel to also be increased after the main DR Frame's FrameLevel increase.
+
+2.2.8
+- A lot of work done towards TBC, it should now be in a decent state. Will probably require a decent bit of tweaks and spells etc. Any support is appreciated.
+- Midnight: Tweak DR Borders with new available API so can actually hide the previous border instead of just overlapping it.
+- Raise DR Frames' FrameLevel a bit.
+
+2.2.7
+- Fix health percent causing lua errors on Midnight due to new changes.
+- Fix DR swipe color not being set on the new Midnight DR Frames.
+- Minor tweak to DR swipe color, making it a little bit more transparent by default.
+
+2.2.6c
+- Minor tweaks
+
+2.2.6b
+- Midnight: Fix a new "secret" error.
+- Midnight: Fix cooldown numbers on CC.
+- Midnight: Fix red DR Text being out of position.
+
+2.2.6
+- New "DR Text" size and position settings in the Layout: Text Settings section. (The DR amount text, not the cooldown text)
+- "Spec Names on Manabar" setting now available in Layout settings for all layouts and not just a few of them.
+- New "Disable Overshields" setting (Global -> Misc)
+- Fix DR Icons unintentionally staying cropped when DR Border was disabled (and Cropped Icons was not enabled)
+- Fix spam errors (every frame) due to decimals no longer being available on Midnight due to restrictions. (Potentially theres a different method later on, will look into it)
+- Fix Gladiuish layout's Trinket, Racial & Dispel default size from 41 to 40. You might have to retweak size/position. Apologies for the inconvenience. Boring info: They were larger than the frames height because the default icons (when not cropped) have an ugly and inconsistent border around them and it was done to make them at least appear visually the same. However this just caues headache with both the cooldown spiral on top and also when crop borders is enabled. Should now be pixel perfect even though it may not look like it without cropped icons setting, feel free to tweak that with size if you want
+
+2.2.5b
+- Fix health & mana number formatting having some leftover code from Midnight work.
+
+2.2.5
+- Add Mes Profile (www.twitch.tv/notmes)
+- Fix some potential click issues if reload during arena, like spec icon button eating clicks.
+
+2.2.4b
+- Midnight: Fix health & mana percent setting causing lua errors due to secrets. Use new Midnight API to fix.
+- Midnight: Make the Reload UI warning not moveable because some people (Raiku) just kept dragging it off screen. This Reload is needed for DR's to function due to Blizzard Beta Edit Mode bugs.
+
+2.2.4
+- Midnight: Some more tweaks to try ensure DR frame does not bug out. However since the DR Frames is from Blizzard now any taint in the game has a high potential of just breaking them. It's awesome stuff really.
+
+2.2.3c
+- Retail & MoP: Fix Feign Death sometimes resetting all DRs on the Hunter. In some cases the Feign Death aura does not get registered, causing DRs to reset before this version. Cool stuff.
+
+2.2.3b
+- Midnight: Fix DR Frames not showing after leaving smth in the wrong state after testing.
+
+2.2.3
+- Fix Target & Focus & Party Target Widgets not working after an efficiency change a while ago and forgetting to change the function call.
+- Midnight: Also fixed the targeting Widgets on Midnight.
+
+2.2.2f
+- Midnight: Hide the DR Frames sticking out in when in Edit Mode.
+
+2.2.2e
+- Midnight: Force reload on first arena as well. (Waiting for Blizzard to fix DRs & Edit Mode)
+
+2.2.2d
+- Few more fixes for Midnight.
+- Root cause for DR frames failing on Midnight found: Edit Mode. Welcome back Dragonflight. I've added a *strongly encouraged* reload button that pops up when you enter Arena. This is good practice during a Beta anyway.
+
+2.2.2c
+- Few more fixes for Midnight.
+
+2.2.2b
+- Midnight fixes and workarounds.
+
+2.2.2 Midnight
+- Midnight should now work. More details at end of notes.
+- New streamer profiles import page in the "Share Profiles" tab. Aeghis, Nahj & Pmake available atm, thank you all <3
+- New layout: BlizzRaid
+- New Castbar color settings.
+- New Castbar "No interrupt ready" color setting. (BBF version is better, this one is currently made with Midnight in mind but might see tweaks in the future. If using BBF just keep using that.)
+- New Castbar un-interruptible texture setting.
+- New "Reverse Bars Fill" setting that reverses health and power fill direction.
+- Target Indicator is now enabled by default on the newer Layouts.It may have turned on for you and if you don't want it turn it off in the Layout settings -> Widgets.
+- Revert the hiding of dark mode & frame color settings on layouts where it makes less sense, since they can still be used to color the castbar.
+
+
+Does NOT work:
+- Most auras except for whatever CC Blizzard wants us to see.
+- Absorb overlay (potential tweaks for that inc later, or just an absorb number)
+- Diminishing Returns settings are wonky and theres a few issues. They will see more work moving forward, heres the current (and maybe permanent) issues:
+1. DR: I cannot control each individual DR icons position. You will still be able to move them around and resize them though but more on that in the next three points.
+2. DR: Grow up and grow down settings no longer work. Grow left and right does. Up and down will just default to grow left instead for now until I clean things up later down the road towards Midnight release.
+3. DR: Gap setting no longer works.
+- Maybe other things I've forgot to mention.
+
+
+2.2.1
+- Add option to disable all auras from Class/Spec icon.
+- Retail: Add missing Surge of Power root from aura list (existed as DR). Ty Jaime.
+- Midnight support should be around the corner but I need to wait for skirmishes to actually test it and make sure first and probably make some tweaks.
+
+2.2.0
+- Separate Dark Mode color from BetterBlizzFrames' dark mode so you can change it to a different value than the rest of your UI. Your dark mode value might need re-adjusting because of this if you were using BBF dark mode plus sArena dark mode.
+- Add two new options to Class Color FrameTexture: Only color icon borders & Color healer green. This will only show up on layouts supporting it (that have borders on class icon specifically)
+- Class Color FrameTexture now also works on Pixelated layout.
+- Hide some settings in the Global section for layouts where they dont apply (for example dark mode for Xaryu layout, since there are no borders to dark mode)
+- Fix castbar texture change not sticking during arenas on the default castbars.
+- Temporary tweak to MoP's BlizzCompact layout with its cooldown edge texture: use circle edge instead to avoid the edge sticking out on the corners. Not sure how to fix this properly yet on MoP.
+
+2.1.9
+- Fix potential castbar coloring issues with Modern Castbar + Custom texture instead of the default ones.
+- Potential fix for some MoP+Human racial settings. Unable to test cuz no test environment. No PTR, no lvl 90, no skirmishes, gg.
+
+2.1.8
+- Add new DR settings and tweak them a bit.
+- New DR Thin Pixel Border setting.
+- New DR Hide Glow setting.
+- Pixelated layout's DR look can now have different looks. Thick Pixel Border is its default but it can now also have Bright DR Border etc.
+- Other layouts than Pixelated can now have the Thick Pixel DR Border / Thin Pixel DR Border setting.
+- Tweak a few aura priorities.
+- Remove Upheaval from Knock DR's.
+- Focus Indicator no longer enabled by default for Blizz Compact layout.
+- Due to an oversight after combining Retail & MoP version into one version I've had to reset DR Reset Time back to their default value (18.5 on Retail and 20 on MoP). Also fix DR Reset Time description on MoP. It had the Retail description and was inaccurate.
+
+2.1.7
+- One new layout: Blizz Compact
+- Four new features in layout settings in new Widgets section:
+1. Target Indicator: Show icon on your current target
+2. Focus Indicator: Show icon on your current focus
+3. Party Target Indicator: Show class colored player icons on arena frames indicating who your party members are targeting.
+4. Combat Indicator: Show food icon on out of combat arena frames.
+- New Hide Castbar Icon setting.
+- Dark mode is no longer enabled by default if BetterBlizzFrames' DarkMode or FrameColor is detected.
+- DR Text setting moved from global to layout settings next to other similar settings.
+- Fix issues with dispel tracker being updated multiple times per one dispell.
+- MoP: Potential fix for Human Racial/Trinket issue on MoP.
+- Misc minor tweaks in gui and layouts.
+
+2.1.6
+- Fix GUI not updating position settings immediately after dragging things around.
+- Fix DR Categories not respecting per spec & per class settings due to falling back to global settings like how Static Icons work, oops.
+
+2.1.5
+- Priest's Purify now displays a stack number on it if double dispel. At 0 stacks it gets desaturated. At 1 or more stacks it stays colored.
+- Add options to disable desaturation on Trinket & Dispel CD (Global -> Arena Frames -> Misc).
+- Re-enable manabar text and add settings to show/hide it and position settings etc. Disabled by default.
+- Tweak layouts a little: Removed font outline on spec name text for Retail layout. Add font outline to the old Arena & Xaryu layout's health & mana text (as it used to be, this got unintentionally removed with new font settings).
+- Fix racials not updating properly between shuffle rounds.
+
+2.1.4
+- New "Simple Castbar" setting for Modern Castbars. Removes text background and puts text inside of the castbar.
+- Tweak to make sure "Swap Trinket with Human Racial" setting works even when Human racial is turned off.
+- Fix unique DR sizes causing first DR icon to not be positioned correctly if it was increased/decreased in size.
+- Retail: Reduce Warlock's Malevolence prio below Dark Pact and Unending Resolve.
+
+2.1.3
+- Added a new temporary section for Midnight info.
+- Fix Font Shadow offset & color. Visible with Outline off.
+- Fix Pixelated's layout showing Dispel's Pixel Border when there was no Dispel or Dispel module turned off.
+- MoP: Fixed "Force Show Trinket on Human" setting to also display cooldown on Human Racial usage.
+- MoP: Tweak some aura priorities
+- MoP: Change Mana Tea to show stack count instead of percent.
+
+2.1.2
+- Fix test title not going away when hiding test mode.
+
+2.1.1
+- Minor tweaks and bugfixes
+
+2.1.0
+- Add Dispels module (Beta, needs more testing and verifying spell ids etc. Please report any issues)
+- Add "Trinket Circle Border" setting for Blizz Arena layout.
+- Add two new MoP settings: Replace Human Texture with Trinket texture & Always show Trinket texture for Humans
+- Fix Class Stacking Only Texture Change setting (but for real this time! oopsiewoopsie)
+- Fix Masque setting causing lua errors and messing things up.
+- Fix color trinket setting not showing Cooldown.
+- Tweak BlizzArena layout's class icon crop so it doesnt show texture borders inside of circle.
+- Fix BlizzTarget layout's name background not being positioned correctly when "Big Healthbar" was disabled.
+- Tweak BlizzTarget layout's FrameTexture to use a higher quality version of the no level texture.
+- Color Trinket setting now completely hides Trinket spot when they don't have a Trinket instead of showing a red color (to emphasize they dont have a trinket, instead of it "being on cd").
+
+2.0.9
+- New setting: Class Color FrameTexture. Class color the border on frames.
+- Dark Mode Color Value is now adjustable and also has a Desaturate toggle. (if BetterBlizzFrames is enabled it still gets its value from there to be consistent)
+- Fix class stacking setting changing texture on healer when there was 2 of an unrelated class to healer.
+- Minor tweaks around in the GUI
+
+2.0.8
+- Mists of Pandaria: Add Monk's Tigereye Brew as offensive prio and Mana Tea as very low prio. Also shows percentage. Feedback on this appreciated.
+
+2.0.7
+- Add option to disable White Flag no trinket texture. (Global -> Arena Frames -> Misc at bottom)
+- Fix shared racial/trinket cooldown showing on White Flag (no trinket texture) unintentionally.
+- Tweak options to display class and spec on the per class/per spec options for better clarity.
+
+2.0.6
+- New Format Numbers setting which is on by default. 18888 K -> 18.88 M
+- New adjustable decimal threshold, default still 6 seconds. Only for non-OmniCC users, configurate your OmniCC instead if you are using that.
+- Added DR Static Icons: Per Spec option
+- Added DR Categories Per Class & Per Spec options
+- New Swipe Animation setting: Disable Cooldown Swipe Edge
+- Fix issues with "Swap Missing Trinket with Racial" setting on MoP
+
+2.0.5
+- Change "Swap Human Racial" setting to instead be "Swap Missing Trinket with Racial". This will move all racials over to trinket spot if they don't have a trinket equipped. (This change is currently only uploaded for Retail due to more testing needed on MoP first)
+- Tweak hunter feign alpha to be a bit more visible
+- Fix wrong unit in class stacking healer func
+
+2.0.4
+- Add back missing "Swap human racial with trinket" setting for the MoP version, where it fits.
+- Tweak pixel border show/hide, shouldnt show unless theres a texture now.
+- Fix icon position not working properly on Pixelated layout.
+- Soft cap on text size increased to 200%
+
+2.0.3
+- Interrupted castbars no longer instantly hide but instead show who interrupted and fades the castbar out slowly.
+- Fix some hide castbar events
+- Fix two lua errors due to typos
+- Don't show cooldown spiral on trinket if no trinket texture.
+
+2.0.2
+- Add new aura stacks indicator in bottom left corner of Class/Aura Icon.
+- Add new text settings that lets you move and resize name, health, etc.
+- Fix stealthed units transparency and tweak the amount
+- Fix Class Icon Swipe going the wrong way by default after introducing new settings for it.
+- Fix frames being bugged after reload while in an arena.
+- Fix missing library for SharedMedia causing addon not to load for some people.
+
+2.0.1
+- Add /sarena test1-5 command.
+- Fix Black DR Border not working during test mode for Pixelated layout.
+- Change wording related to other sArena's. Reminder that this version is made based on the original one by Stako with their blessing: "Others are free to submit updates or upload their own versions".
+
+2.0.0
+- This sArena version has now also launched as a Retail version! Everything below is for both versions (but MoP needs some more data for the non-duration auras)
+- New Retail layout
+- Add Shields & Overshields to healthbars
+- New Texture & Font settings (And removed old classic bars & prototype setting)
+- New Dark Mode setting (also follows BetterBlizzFrames if you have that)
+- New Modern Castbars look setting.
+- New Bright DR Border setting.
+- New setting that lets you texture swap healers specifically, optionally only when class stacking.
+- New "Replace Healer Icon" setting. Turns Healer Icon into Healer Cross.
+- New "Per Class" Static DR Icon setting. Aka show Blind icon on Rogue and Fear icon on Priest etc.
+- New swipe animation settings: Disable & Reverse, for DR, Class Icon and Trinket/Racial.
+- New Class Color Names setting
+- New "Skip Mystery Gray" setting that avoids coloring unseen units gray (pre-gates, stealthed)
+- Frames are now class colored by default in spawn and for stealthed units, new setting to keep it like it was originally "Color Non-Visible Frames Gray"
+- Castbars now instantly hide on finished casts.
+- Interrupt durations now take interrupt reduction auras into consideration.
+- Now shows duration on auras that don't have durations implemented by default (Smoke Bomb, Earthen Wall, Barrier, etc)
+- Hunter's Feign Death no longer shows up as dead but instead keeps the HP at what it was upon feigning and makes it slightly transparent.
+- Title above testing frames can now also be dragged to move the frames.
+
+1.2.1
+- Fix typo in hiding default arena frames
+- Fix Color Trinket setting sometimes going gray instead of its intended red color.
+
+1.2.0
+- Added Import/Export profile sharing system. Shares active profile.
+- Added "Static DR Icons" setting to set specicifc icons for specific DRs instead of the dynamic ones.
+- Added "Crop Icons" to Xaryu Layout.
+- Fixed DR Text setting showing +1 DR
+- Fixed crop icons test mode not working 100%
+- Fix "Hide" after testing not hiding the Title+Drag Info text above frames
+
+1.1.9
+- Fixed some interrupt durations.
+
+1.1.8
+- Added some missing interrupts to interrupt list. Thank you to Moonfirebeam for reporting these.
+
+1.1.7
+- Added castbar icon position settings and "hide shield texture" setting. (Layout Settings -> Cast Bar)
+
+1.1.6
+- New individual DR size adjustment settings (Layout)
+- New DR Text setting
+- New Hide DR Swipe Animation setting
+- Minor aura tweaks
+
+1.1.5
+- Add new layout "Pixelated".
+- Add "Swap Trinket with Race for Human" setting.
+- Add "Color Trinket" setting. Colors Trinket flat green when its available and red when its on cooldown.
+- Few more aura tweaks.
+- Added Icebound Fortitude glyph detection to raise its priority when they're immune to CC.
+
+1.1.4
+- Improve the Masque support and tweak the Frame setting. Also added Castbar and SpecIcon to it.
+- Tweaked auras and their priorities.
+- New Castbar Icon Scale Slider.
+- Fix the Invert DR Cooldown Sweep settings not getting applied on login.
+
+1.1.3
+- Fix potential nil error in some cases
+
+1.1.2
+- Added Masque support.
+- Added many defensives & offensive auras. And a few missing CC ones.
+- Added Crop Icons setting.
+- Tweaked aura priority a bit (more inc probably)
+- Add new "Reverse Cooldown Sweep" in Global DR Settings.
+- Add two new settings: Show Decimals on Class Icon & DR's (Shows below 6 seconds)
+- Add slider to adjust Dynamic DR duration in Global DR Settings.
+- Fix Arena Frames not showing if your arena partner didnt join the arena.
+- Fixed DR categories.
+- Had a bit more fun with the test mode.
+
+1.1.1
+- Add some missing auras
+
+1.1.0
+- Remove Decounce put as stun from old cata spell id
+
+1.0.9
+- Add more missing auras
+- Fix interrupt durations and added Solar Beam
+- Interrupts now have lower prio than pure silences and will show after silence ends instead.
+
+1.0.8
+- Fix Trinket API call causing Trinkets to not always be accurate.
+- Un-interruptible castbars now show as gray color
+- Add a few more missing spells.
+
+1.0.7
+- Fix trinkets not getting colored again when cd expires
+
+1.0.6
+- Fix nelf racial texture missing
+- Remove grayed out human trinket, trinkets now grayed out only when on CD.
+- Known Issue: Trinket CD not always displaying the cooldown spiral texture. Need more testing.
+
+1.0.5
+- Trinkets now show grayed out while on CD and for Humans. Might change the Human part. See how I feel about and feedback I get.
+- Added a missing Turn Evil aura ID.
+- Known Issue: Trinket CD not always displaying the cooldown spiral texture. Need more testing.
+
+1.0.4
+- Fix minor issue with spec icon
+
+1.0.3
+- Added more settings.
+- Cleaned up a few things.
+- Added a converter from old sArena to MoP Classic version.

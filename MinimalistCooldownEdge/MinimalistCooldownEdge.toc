@@ -1,0 +1,75 @@
+## Interface: 120100
+## AllowLoadGameType: mainline
+## Title: |cff00ccffMiniCE|r (Minimalist Cooldown Edge)
+## Notes: Clean cooldowns with category-specific styles.
+## Author: Anahkas
+## Version: 4.6.3
+## IconTexture: Interface\AddOns\MinimalistCooldownEdge\Assets\Textures\MinimalistCooldownEdge
+## Category: Action Bars
+## X-Curse-Project-ID: 1443896
+## SavedVariables: MinimalistCooldownEdgeDB_v2
+## OptionalDeps: LibSharedMedia-3.0, Bartender4, Dominos, Dominos_Cast, Dominos_Config, ElvUI, HealerCC, MiniAuras, sArena_Reloaded, TellMeWhen, ShinyAuras, MyDRs, CooldownManagerCentered, mUI, BetterBlizzFrames, BetterBlizzPlates, Shackled
+
+
+# Libraries
+Libs\Ace3\LibStub\LibStub.lua
+Libs\Ace3\CallbackHandler-1.0\CallbackHandler-1.0.xml
+Libs\Ace3\AceAddon-3.0\AceAddon-3.0.xml
+Libs\Ace3\AceConsole-3.0\AceConsole-3.0.xml
+Libs\Ace3\AceEvent-3.0\AceEvent-3.0.xml
+Libs\Ace3\AceHook-3.0\AceHook-3.0.xml
+Libs\Ace3\AceGUI-3.0\AceGUI-3.0.xml
+Libs\Ace3\AceConfig-3.0\AceConfig-3.0.xml
+Libs\Ace3\AceDB-3.0\AceDB-3.0.xml
+Libs\Ace3\AceDBOptions-3.0\AceDBOptions-3.0.xml
+Libs\Ace3\AceSerializer-3.0\AceSerializer-3.0.xml
+Libs\Ace3\AceLocale-3.0\AceLocale-3.0.xml
+
+# Locales
+Locales\enUS.lua
+Locales\deDE.lua
+Locales\frFR.lua
+Locales\esES.lua
+Locales\esMX.lua
+Locales\ptBR.lua
+Locales\ruRU.lua
+Locales\koKR.lua
+Locales\zhCN.lua
+Locales\zhTW.lua
+Locales\itIT.lua
+
+# Core
+Core\Constants.lua
+Core\Core.lua
+
+# Foundation
+Modules\TargetRegistry.lua
+Modules\BatchProcessor.lua
+Modules\Classifier.lua
+
+# Adapters
+Adapters\ElvUIAdapter.lua
+Adapters\DominosAdapter.lua
+Adapters\Bartender4Adapter.lua
+Adapters\ActionBarAdapter.lua
+Adapters\HealerCCAdapter.lua
+Adapters\MiniAurasAdapter.lua
+Adapters\MyDRsAdapter.lua
+Adapters\SArenaAdapter.lua
+Adapters\TellMeWhenAdapter.lua
+Adapters\ShackledAdapter.lua
+Adapters\ShinyAurasAdapter.lua
+Adapters\NameplateAdapter.lua
+Adapters\UnitFrameAdapter.lua
+Adapters\CooldownManagerAdapter.lua
+
+# Styling Pipeline
+Modules\StyleEngine.lua
+Modules\DurationColorController.lua
+Modules\Styler.lua
+Modules\HookBridge.lua
+Modules\PlayerAuraStyler.lua
+
+# UI
+UI\ImportExport.lua
+UI\Options.lua
